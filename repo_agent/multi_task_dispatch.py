@@ -13,7 +13,7 @@ class Task:
         self.task_id = task_id
         self.extra_info = extra_info
         self.dependencies = dependencies
-        self.status = 0  # 任务状态：0未开始，1正在进行，2已经完成，3出错了
+        self.status = 0
 
 
 class TaskManager:
@@ -97,7 +97,7 @@ class TaskManager:
             for task in self.task_dict.values():
                 if target_task in task.dependencies:
                     task.dependencies.remove(target_task)
-            self.task_dict.pop(task_id)  # 从任务字典中移除
+            self.task_dict.pop(task_id)
 
 
 def worker(task_manager, process_id: int, handler: Callable):
@@ -128,10 +128,9 @@ def worker(task_manager, process_id: int, handler: Callable):
 if __name__ == "__main__":
     task_manager = TaskManager()
 
-    def some_function():  # 随机睡一会
+    def some_function():
         time.sleep(random.random() * 3)
 
-    # 添加任务，例如：
     i1 = task_manager.add_task(some_function, [])  # type: ignore
     i2 = task_manager.add_task(some_function, [])  # type: ignore
     i3 = task_manager.add_task(some_function, [i1])  # type: ignore

@@ -1,0 +1,15 @@
+start_text:
+  auth:
+  gigachat_auth: 'Basic {token}' #Токен базовой авторизации в sber gigachat
+  yagpt_oauth: '' # токен авторизации в yandex gpt
+  yandexPassportOauthToken: '' # токен авторизации в yandex gpt (аналогичный предыдущему)
+  folder_id: '' # folder id в личном кабинете yandexgpt
+  yandexgpt_key: '' # Ключ yandexgpt
+  openai_key: '' # ключ OpenAI api
+links:
+  gigachat_auth_link: 'https://ngw.devices.sberbank.ru:9443/api/v2/oauth'
+  gigachat_gpt_link: 'https://gigachat.devices.sberbank.ru/api/v1/chat/completions'
+  yandex_gpt_api_url: 'https://llm.api.cloud.yandex.net/foundationModels/v1/completion'
+  yandex_gpt_token_url: 'https://iam.api.cloud.yandex.net/iam/v1/tokens'
+  wiki_url: '' # Ссылка на ваш confluence TODO
+  testit_url: '' #Ссылка на ваш TestIT

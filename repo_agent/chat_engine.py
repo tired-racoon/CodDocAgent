@@ -4,6 +4,7 @@ from repo_agent.doc_meta_info import DocItem
 from repo_agent.log import logger
 from repo_agent.prompt import chat_template
 from repo_agent.settings import SettingsManager
+from llm import *
 
 
 class ChatEngine:

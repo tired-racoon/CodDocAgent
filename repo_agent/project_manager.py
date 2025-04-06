@@ -23,7 +23,7 @@ class ProjectManager:
             structure.append(prefix + os.path.basename(root))
             new_prefix = prefix + "  "
             for name in sorted(os.listdir(root)):
-                if name.startswith("."):  # 忽略隐藏文件和目录
+                if name.startswith("."):
                     continue
                 path = os.path.join(root, name)
                 if os.path.isdir(path):
@@ -43,7 +43,6 @@ class ProjectManager:
 
         path_tree = tree()
 
-        # 构建 who_reference_me 和 reference_who 的树
         for path_list in [who_reference_me, reference_who]:
             for path in path_list:
                 parts = path.split(os.sep)
@@ -51,9 +50,8 @@ class ProjectManager:
                 for part in parts:
                     node = node[part]
 
-        # 处理 doc_item_path
         parts = doc_item_path.split(os.sep)
-        parts[-1] = "✳️" + parts[-1]  # 在最后一个对象前面加上星号
+        parts[-1] = "✳️" + parts[-1]
         node = path_tree
         for part in parts:
             node = node[part]

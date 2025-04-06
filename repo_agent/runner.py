@@ -44,14 +44,12 @@ class Runner:
             self.meta_info.checkpoint(
                 target_dir_path=self.absolute_project_hierarchy_path
             )
-        else:  # 如果存在全局结构信息文件夹.project_hierarchy，就从中加载
+        else:
             self.meta_info = MetaInfo.from_checkpoint_path(
                 self.absolute_project_hierarchy_path
             )
 
-        self.meta_info.checkpoint(  # 更新白名单后也要重新将全局信息写入到.project_doc_record文件夹中
-            target_dir_path=self.absolute_project_hierarchy_path
-        )
+        self.meta_info.checkpoint(target_dir_path=self.absolute_project_hierarchy_path)
         self.runner_lock = threading.Lock()
 
     def get_all_pys(self, directory):
@@ -74,7 +72,6 @@ class Runner:
         return python_files
 
     def generate_doc_for_a_single_item(self, doc_item: DocItem):
-        """为一个对象生成文档"""
         try:
             if not need_to_generate(doc_item, self.setting.project.ignore_list):
                 print(
@@ -99,9 +96,7 @@ class Runner:
             doc_item.item_status = DocItemStatus.doc_has_not_been_generated
 
     def first_generate(self):
-        """
-        生成所有文档，完成后刷新并保存文件系统中的文档信息。
-        """
+
         logger.info("Starting to generate documentation")
         check_task_available_func = partial(
             need_to_generate, ignore_list=self.setting.project.ignore_list
@@ -117,7 +112,6 @@ class Runner:
         self.meta_info.print_task_list(task_manager.task_dict)
 
         try:
-            # 创建并启动线程
             threads = [
                 threading.Thread(
                     target=worker,
@@ -134,10 +128,8 @@ class Runner:
             for thread in threads:
                 thread.join()
 
-            # 所有任务完成后刷新文档
             self.markdown_refresh()
 
-            # 更新文档版本
             self.meta_info.document_version = (
                 self.change_detector.repo.head.commit.hexsha
             )
@@ -155,27 +147,23 @@ class Runner:
             )
 
     def markdown_refresh(self):
-        """刷新最新的文档信息到markdown格式文件夹中"""
         with self.runner_lock:
-            # 定义 markdown 文件夹路径
             markdown_folder = (
                 Path(self.setting.project.target_repo)
                 / self.setting.project.markdown_docs_name
             )
 
-            # 删除并重新创建目录
             if markdown_folder.exists():
                 logger.debug(f"Deleting existing contents of {markdown_folder}")
                 shutil.rmtree(markdown_folder)
             markdown_folder.mkdir(parents=True, exist_ok=True)
             logger.debug(f"Created markdown folder at {markdown_folder}")
 
-        # 遍历文件列表生成 markdown
         file_item_list = self.meta_info.get_all_files()
         logger.debug(f"Found {len(file_item_list)} files to process.")
 
         for file_item in tqdm(file_item_list):
-            # 检查文档内容
+
             def recursive_check(doc_item) -> bool:
                 if doc_item.md_content:
                     return True
@@ -190,7 +178,6 @@ class Runner:
                 )
                 continue
 
-            # 生成 markdown 内容
             markdown = ""
             for child in file_item.children.values():
                 markdown += self.to_markdown(child, 2)
@@ -201,20 +188,17 @@ class Runner:
                 )
                 continue
 
-            # 确定并创建文件路径
             file_path = Path(
                 self.setting.project.markdown_docs_name
             ) / file_item.get_file_name().replace(".py", ".md")
             abs_file_path = self.setting.project.target_repo / file_path
             logger.debug(f"Writing markdown to: {abs_file_path}")
 
-            # 确保目录存在
             abs_file_path.parent.mkdir(parents=True, exist_ok=True)
             logger.debug(f"Ensured directory exists: {abs_file_path.parent}")
 
-            # 使用锁保护文件写入操作
             with self.runner_lock:
-                for attempt in range(3):  # 最多重试3次
+                for attempt in range(3):
                     try:
                         with open(abs_file_path, "w", encoding="utf-8") as file:
                             file.write(markdown)
@@ -224,14 +208,13 @@ class Runner:
                         logger.error(
                             f"Failed to write {abs_file_path} on attempt {attempt + 1}: {e}"
                         )
-                        time.sleep(1)  # 延迟再试
+                        time.sleep(1)
 
         logger.info(
             f"Markdown documents have been refreshed at {self.setting.project.markdown_docs_name}"
         )
 
     def to_markdown(self, item, now_level: int) -> str:
-        """将文件内容转化为 markdown 格式的文本"""
         markdown_content = (
             "#" * now_level + f" {item.item_type.to_str()} {item.obj_name}"
         )
@@ -267,38 +250,23 @@ class Runner:
         """
 
         if self.meta_info.document_version == "":
-            # 根据document version自动检测是否仍在最初生成的process里(是否为第一次生成)
-            self.first_generate()  # 如果是第一次做文档生成任务，就通过first_generate生成所有文档
+            self.first_generate()
             self.meta_info.checkpoint(
                 target_dir_path=self.absolute_project_hierarchy_path,
                 flash_reference_relation=True,
-            )  # 这一步将生成后的meta信息（包含引用关系）写入到.project_doc_record文件夹中
+            )
             return
 
-        if (
-            not self.meta_info.in_generation_process
-        ):  # 如果不是在生成过程中，就开始检测变更
+        if not self.meta_info.in_generation_process:
             logger.info("Starting to detect changes.")
 
-            """采用新的办法
-            1.新建一个project-hierachy
-            2.和老的hierarchy做merge,处理以下情况：
-            - 创建一个新文件：需要生成对应的doc
-            - 文件、对象被删除：对应的doc也删除(按照目前的实现，文件重命名算是删除再添加)
-            - 引用关系变了：对应的obj-doc需要重新生成
-            
-            merge后的new_meta_info中：
-            1.新建的文件没有文档，因此metainfo merge后还是没有文档
-            2.被删除的文件和obj，本来就不在新的meta里面，相当于文档被自动删除了
-            3.只需要观察被修改的文件，以及引用关系需要被通知的文件去重新生成文档"""
             file_path_reflections, jump_files = make_fake_files()
             new_meta_info = MetaInfo.init_meta_info(file_path_reflections, jump_files)
             new_meta_info.load_doc_from_older_meta(self.meta_info)
 
-            self.meta_info = new_meta_info  # 更新自身的meta_info信息为new的信息
-            self.meta_info.in_generation_process = True  # 将in_generation_process设置为True，表示检测到变更后Generating document 的过程中
+            self.meta_info = new_meta_info
+            self.meta_info.in_generation_process = True
 
-        # 处理任务队列
         check_task_available_func = partial(
             need_to_generate, ignore_list=self.setting.project.ignore_list
         )
@@ -345,7 +313,6 @@ class Runner:
         logger.info(f"Starting to git-add DocMetaInfo and newly generated Docs")
         time.sleep(1)
 
-        # 将run过程中更新的Markdown文件（未暂存）添加到暂存区
         git_add_result = self.change_detector.add_unstaged_files()
 
         if len(git_add_result) > 0:
@@ -367,7 +334,6 @@ class Runner:
             None
         """
         file_dict = {}
-        # 因为是新增的项目，所以这个文件里的所有对象都要写一个文档
         for (
             structure_type,
             name,
@@ -382,21 +348,17 @@ class Runner:
             response_message = self.chat_engine.generate_doc(code_info, file_handler)
             md_content = response_message.content
             code_info["md_content"] = md_content
-            # 文件对象file_dict中添加一个新的对象
             file_dict[name] = code_info
 
         json_data[file_handler.file_path] = file_dict
-        # 将新的项写入json文件
         with open(self.project_manager.project_hierarchy, "w", encoding="utf-8") as f:
             json.dump(json_data, f, indent=4, ensure_ascii=False)
         logger.info(
             f"The structural information of the newly added file {file_handler.file_path} has been written into a JSON file."
         )
-        # 将变更部分的json文件内容转换成markdown内容
         markdown = file_handler.convert_to_markdown_file(
             file_path=file_handler.file_path
         )
-        # 将markdown内容写入.md文件
         file_handler.write_file(
             os.path.join(
                 self.project_manager.repo_path,
@@ -405,7 +367,7 @@ class Runner:
             ),
             markdown,
         )
-        logger.info(f"已生成新增文件 {file_handler.file_path} 的Markdown文档。")
+        logger.info(f" {file_handler.file_path} Markdown")
 
     def process_file_changes(self, repo_path, file_path, is_new_file):
         """
@@ -421,10 +383,8 @@ class Runner:
             None
         """
 
-        file_handler = FileHandler(
-            repo_path=repo_path, file_path=file_path
-        )  # 变更文件的操作器
-        # 获取整个py文件的代码
+        file_handler = FileHandler(repo_path=repo_path, file_path=file_path)
+
         source_code = file_handler.read_file()
         changed_lines = self.change_detector.parse_diffs(
             self.change_detector.get_file_diff(file_path, is_new_file)
@@ -432,19 +392,15 @@ class Runner:
         changes_in_pyfile = self.change_detector.identify_changes_in_structure(
             changed_lines, file_handler.get_functions_and_classes(source_code)
         )
-        logger.info(f"检测到变更对象：\n{changes_in_pyfile}")
+        logger.info(f"Changes in file ：\n{changes_in_pyfile}")
 
-        # 判断project_hierarchy.json文件中能否找到对应.py文件路径的项
         with open(self.project_manager.project_hierarchy, "r", encoding="utf-8") as f:
             json_data = json.load(f)
 
-        # 如果找到了对应文件
         if file_handler.file_path in json_data:
-            # 更新json文件中的内容
             json_data[file_handler.file_path] = self.update_existing_item(
                 json_data[file_handler.file_path], file_handler, changes_in_pyfile
             )
-            # 将更新后的file写回到json文件中
             with open(
                 self.project_manager.project_hierarchy, "w", encoding="utf-8"
             ) as f:
@@ -452,11 +408,9 @@ class Runner:
 
             logger.info(f"已更新{file_handler.file_path}文件的json结构信息。")
 
-            # 将变更部分的json文件内容转换成markdown内容
             markdown = file_handler.convert_to_markdown_file(
                 file_path=file_handler.file_path
             )
-            # 将markdown内容写入.md文件
             file_handler.write_file(
                 os.path.join(
                     self.setting.project.markdown_docs_name,
@@ -464,19 +418,17 @@ class Runner:
                 ),
                 markdown,
             )
-            logger.info(f"已更新{file_handler.file_path}文件的Markdown文档。")
+            logger.info(f"{file_handler.file_path} Markdown")
 
-        # 如果没有找到对应的文件，就添加一个新的项
         else:
             self.add_new_item(file_handler, json_data)
 
-        # 将run过程中更新的Markdown文件（未暂存）添加到暂存区
         git_add_result = self.change_detector.add_unstaged_files()
 
         if len(git_add_result) > 0:
-            logger.info(f"已添加 {[file for file in git_add_result]} 到暂存区")
+            logger.info(f"Added files {[file for file in git_add_result]}")
 
-        # self.git_commit(f"Update documentation for {file_handler.file_path}") # 提交变更
+        # self.git_commit(f"Update documentation for {file_handler.file_path}")
 
     def update_existing_item(self, file_dict, file_handler, changes_in_pyfile):
         """
@@ -492,23 +444,19 @@ class Runner:
         """
         new_obj, del_obj = self.get_new_objects(file_handler)
 
-        # 处理被删除的对象
-        for obj_name in del_obj:  # 真正被删除的对象
+        for obj_name in del_obj:
             if obj_name in file_dict:
                 del file_dict[obj_name]
                 logger.info(f"已删除 {obj_name} 对象。")
 
         referencer_list = []
 
-        # 生成文件的结构信息，获得当前文件中的所有对象， 这里其实就是文件更新之后的结构了
         current_objects = file_handler.generate_file_structure(file_handler.file_path)
 
         current_info_dict = {obj["name"]: obj for obj in current_objects.values()}
 
-        # 更新全局文件结构信息，比如代码起始行\终止行等
         for current_obj_name, current_obj_info in current_info_dict.items():
             if current_obj_name in file_dict:
-                # 如果当前对象在旧对象列表中存在，更新旧对象的信息
                 file_dict[current_obj_name]["type"] = current_obj_info["type"]
                 file_dict[current_obj_name]["code_start_line"] = current_obj_info[
                     "code_start_line"
@@ -521,16 +469,11 @@ class Runner:
                     "name_column"
                 ]
             else:
-                # 如果当前对象在旧对象列表中不存在，将新对象添加到旧对象列表中
                 file_dict[current_obj_name] = current_obj_info
 
-        # 对于每一个对象：获取其引用者列表
         for obj_name, _ in changes_in_pyfile["added"]:
-            for current_object in current_objects.values():  # 引入new_objects的目的是获取到find_all_referencer中必要的参数信息。在changes_in_pyfile['added']中只有对象和其父级结构的名称，缺少其他参数
-                if (
-                    obj_name == current_object["name"]
-                ):  # 确保只有当added中的对象名称匹配new_objects时才添加引用者
-                    # 获取每个需要生成文档的对象的引用者
+            for current_object in current_objects.values():
+                if obj_name == current_object["name"]:
                     referencer_obj = {
                         "obj_name": obj_name,
                         "obj_referencer_list": self.project_manager.find_all_referencer(
@@ -540,18 +483,13 @@ class Runner:
                             column_number=current_object["name_column"],
                         ),
                     }
-                    referencer_list.append(
-                        referencer_obj
-                    )  # 对于每一个正在处理的对象，添加他的引用者字典到全部对象的应用者列表中
+                    referencer_list.append(referencer_obj)
 
         with ThreadPoolExecutor(max_workers=5) as executor:
-            # 通过线程池并发执行
             futures = []
-            for changed_obj in changes_in_pyfile["added"]:  # 对于每一个待处理的对象
+            for changed_obj in changes_in_pyfile["added"]:
                 for ref_obj in referencer_list:
-                    if (
-                        changed_obj[0] == ref_obj["obj_name"]
-                    ):  # 在referencer_list中找到它的引用者字典！
+                    if changed_obj[0] == ref_obj["obj_name"]:
                         future = executor.submit(
                             self.update_object,
                             file_dict,
@@ -560,14 +498,13 @@ class Runner:
                             ref_obj["obj_referencer_list"],
                         )
                         print(
-                            f"正在生成 {Fore.CYAN}{file_handler.file_path}{Style.RESET_ALL}中的{Fore.CYAN}{changed_obj[0]}{Style.RESET_ALL}对象文档."
+                            f"Style reset {Fore.CYAN}{file_handler.file_path}{Style.RESET_ALL}  {Fore.CYAN}{changed_obj[0]}{Style.RESET_ALL}"
                         )
                         futures.append(future)
 
             for future in futures:
                 future.result()
 
-        # 更新传入的file参数
         return file_dict
 
     def update_object(self, file_dict, file_handler, obj_name, obj_referencer_list):
@@ -625,4 +562,4 @@ if __name__ == "__main__":
 
     runner.run()
 
-    logger.info("文档任务完成。")
+    logger.info("Finished")

@@ -10,10 +10,6 @@ from repo_agent.settings import SettingsManager
 
 
 class ChangeDetector:
-    """
-    这个类需要处理文件的差异和变更检测，它可能会用到 FileHandler 类来访问文件系统。
-    ChangeDetector 类的核心在于能够识别自上次提交以来文件的变更。
-    """
 
     def __init__(self, repo_path):
         """
@@ -98,7 +94,6 @@ class ChangeDetector:
         line_number_change = 0
 
         for line in diffs:
-            # 检测行号信息，例如 "@@ -43,33 +43,40 @@"
             line_number_info = re.match(r"@@ \-(\d+),\d+ \+(\d+),\d+ @@", line)
             if line_number_info:
                 line_number_current = int(line_number_info.group(1))
@@ -112,7 +107,6 @@ class ChangeDetector:
                 changed_lines["removed"].append((line_number_current, line[1:]))
                 line_number_current += 1
             else:
-                # 对于没有变化的行，两者的行号都需要增加
                 line_number_current += 1
                 line_number_change += 1
 
@@ -150,7 +144,6 @@ class ChangeDetector:
                         changes_in_structures[change_type].add((name, parent_structure))
         return changes_in_structures
 
-    # TODO:可能有错，需要单元测试覆盖； 可能有更好的实现方式
     def get_to_be_staged_files(self):
         """
         This method retrieves all unstaged files in the repository that meet one of the following conditions:
@@ -161,9 +154,7 @@ class ChangeDetector:
 
         :return: A list of relative file paths to the repo that are either modified but not staged, or untracked, and meet one of the conditions above.
         """
-        # 已经更改但是暂未暂存的文件，这里只能是.md文件，因为作者不提交的.py文件（即使发生变更）我们不做处理。
         to_be_staged_files = []
-        # staged_files是已经暂存的文件，通常这里是作者做了更改后git add 的.py文件 或其他文件
         staged_files = [item.a_path for item in self.repo.index.diff("HEAD")]
         print(
             f"{Fore.LIGHTYELLOW_EX}target_repo_path{Style.RESET_ALL}: {self.repo_path}"
@@ -175,25 +166,17 @@ class ChangeDetector:
         setting = SettingsManager.get_setting()
 
         project_hierarchy = setting.project.hierarchy_name
-        # diffs是所有未暂存更改文件的列表。这些更改文件是相对于工作区（working directory）的，也就是说，它们是自上次提交（commit）以来在工作区发生的更改，但还没有被添加到暂存区（staging area）
-        # 比如原本存在的md文件现在由于代码的变更发生了更新，就会标记为未暂存diff
         diffs = self.repo.index.diff(None)
-        # untracked_files是一个包含了所有未跟踪文件的列表。比如说用户添加了新的.py文件后项目自己生成的对应.md文档。它们是在工作区中存在但还没有被添加到暂存区（staging area）的文件。
-        # untracked_files中的文件路径是绝对路径
         untracked_files = self.repo.untracked_files
         print(f"{Fore.LIGHTCYAN_EX}untracked_files{Style.RESET_ALL}: {untracked_files}")
 
-        # 处理untrack_files中的内容
         for untracked_file in untracked_files:
-            # 连接repo_path和untracked_file以获取完整的绝对路径
             if untracked_file.startswith(setting.project.markdown_docs_name):
                 to_be_staged_files.append(untracked_file)
             continue
             print(f"rel_untracked_file:{rel_untracked_file}")
             # import pdb; pdb.set_trace()
-            # 判断这个文件的类型：
             if rel_untracked_file.endswith(".md"):
-                # 把rel_untracked_file从CONFIG['Markdown_Docs_folder']中拆离出来。判断是否能跟暂存区中的某一个.py文件对应上
                 rel_untracked_file = os.path.relpath(
                     rel_untracked_file, setting.project.markdown_docs_name
                 )
@@ -202,7 +185,6 @@ class ChangeDetector:
                     f"corresponding_py_file in untracked_files:{corresponding_py_file}"
                 )
                 if corresponding_py_file in staged_files:
-                    # 如果是，那么就把这个md文件也加入到unstaged_files中
                     to_be_staged_files.append(
                         os.path.join(
                             self.repo_path.lstrip("/"),
@@ -213,36 +195,29 @@ class ChangeDetector:
             elif rel_untracked_file == project_hierarchy:
                 to_be_staged_files.append(rel_untracked_file)
 
-        # 处理已追踪但是未暂存的内容
         unstaged_files = [diff.b_path for diff in diffs]
         print(f"{Fore.LIGHTCYAN_EX}unstaged_files{Style.RESET_ALL}: {unstaged_files}")
 
         for unstaged_file in unstaged_files:
-            # 连接repo_path和unstaged_file以获取完整的绝对路径
             if unstaged_file.startswith(
                 setting.project.markdown_docs_name
             ) or unstaged_file.startswith(setting.project.hierarchy_name):
                 # abs_unstaged_file = os.path.join(self.repo_path, unstaged_file)
-                # # # 获取相对于仓库根目录的相对路径
                 # # rel_unstaged_file = os.path.relpath(abs_unstaged_file, self.repo_path)
                 to_be_staged_files.append(unstaged_file)
-            elif unstaged_file == project_hierarchy:  # project_hierarchy永远add
+            elif unstaged_file == project_hierarchy:
                 to_be_staged_files.append(unstaged_file)
             continue
             abs_unstaged_file = os.path.join(self.repo_path, unstaged_file)
-            # 获取相对于仓库根目录的相对路径
             rel_unstaged_file = os.path.relpath(abs_unstaged_file, self.repo_path)
             print(f"rel_unstaged_file:{rel_unstaged_file}")
-            # 如果它是md文件
             if unstaged_file.endswith(".md"):
-                # 把rel_unstaged_file从CONFIG['Markdown_Docs_folder']中拆离出来。判断是否能跟暂存区中的某一个.py文件对应上
                 rel_unstaged_file = os.path.relpath(
                     rel_unstaged_file, setting.project.markdown_docs_name
                 )
                 corresponding_py_file = os.path.splitext(rel_unstaged_file)[0] + ".py"
                 print(f"corresponding_py_file:{corresponding_py_file}")
                 if corresponding_py_file in staged_files:
-                    # 如果是，那么就把这个md文件也加入到unstaged_files中
                     to_be_staged_files.append(
                         os.path.join(
                             self.repo_path.lstrip("/"),
@@ -250,7 +225,7 @@ class ChangeDetector:
                             rel_unstaged_file,
                         )
                     )
-            elif unstaged_file == project_hierarchy:  # project_hierarchy永远add
+            elif unstaged_file == project_hierarchy:
                 to_be_staged_files.append(unstaged_file)
         print(
             f"{Fore.LIGHTRED_EX}newly_staged_files{Style.RESET_ALL}: {to_be_staged_files}"

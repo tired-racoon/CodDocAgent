@@ -24,7 +24,6 @@ def cli():
 
 def handle_setting_error(e: ValidationError):
     """Handle configuration errors for settings."""
-    # 输出更详细的字段缺失信息，使用颜色区分
     for error in e.errors():
         field = error["loc"][-1]
         if error["type"] == "missing":
@@ -36,7 +35,6 @@ def handle_setting_error(e: ValidationError):
             message = click.style(error["msg"], fg="yellow")
         click.echo(message, err=True, color=True)
 
-    # 使用 ClickException 优雅地退出程序
     raise click.ClickException(
         click.style(
             "Program terminated due to configuration errors.", fg="red", bold=True
@@ -48,7 +46,7 @@ def handle_setting_error(e: ValidationError):
 @click.option(
     "--model",
     "-m",
-    default="gpt-4o-mini",
+    default="gpt-4o-mini",  # TODO
     show_default=True,
     help="Specifies the model to use for completion.",
     type=str,
@@ -72,7 +70,7 @@ def handle_setting_error(e: ValidationError):
 @click.option(
     "--base-url",
     "-b",
-    default="https://api.openai.com/v1",
+    default="https://api.openai.com/v1",  # TODO
     show_default=True,
     help="The base URL for the API calls.",
     type=str,
@@ -110,7 +108,7 @@ def handle_setting_error(e: ValidationError):
 @click.option(
     "--language",
     "-l",
-    default="English",
+    default="Russian",
     show_default=True,
     help="The ISO 639 code or language name for the documentation. ",
     type=str,
@@ -172,7 +170,6 @@ def run(
         handle_setting_error(e)
         return
 
-    # 如果设置成功，则运行任务
     runner = Runner()
     runner.run()
     logger.success("Documentation task completed.")
@@ -199,7 +196,7 @@ def diff():
         return
 
     runner = Runner()
-    if runner.meta_info.in_generation_process:  # 如果不是在生成过程中，就开始检测变更
+    if runner.meta_info.in_generation_process:
         click.echo("This command only supports pre-check")
         raise click.Abort()
 
