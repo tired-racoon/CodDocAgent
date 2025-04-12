@@ -2,7 +2,6 @@ from __future__ import annotations
 import requests
 import json
 import uuid
-import time
 import yaml
 from repo_agent.log import logger
 
@@ -55,15 +54,13 @@ def gigachat_gpt(prom: str, temperature: float = 0.8):
         "Accept": "application/json",
         "Authorization": "Bearer " + get_token(),
     }
-    # response = requests.request(
-    #     "POST",
-    #     config["links"]["gigachat_gpt_link"],
-    #     headers=headers,
-    #     data=payload,
-    #     verify=False,
-    # )
-    # data = response.json()
-    data = 'Hello world!'   # отладка!
-    time.sleep(1)
+    response = requests.request(
+        "POST",
+        config["links"]["gigachat_gpt_link"],
+        headers=headers,
+        data=payload,
+        verify=False,
+    )
+    data = response.json()
     # logger.info(data)
-    return data # data["choices"][0]["message"]["content"]
+    return data["choices"][0]["message"]["content"]
