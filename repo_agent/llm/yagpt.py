@@ -20,7 +20,7 @@ def getToken() -> str:
     return data["iamToken"]
 
 
-def yandex_gpt(prom: str, model: str, old_prompt="", old_response=""):
+def yandex_gpt(prom: str, model: str, temperature=0.6, old_prompt="", old_response=""):
     """
     :param prom:
     :param model:
@@ -52,7 +52,7 @@ def yandex_gpt(prom: str, model: str, old_prompt="", old_response=""):
         },
         json={
             "modelUri": model_uri,
-            "completionOptions": {"stream": False, "temperature": 0.6},
+            "completionOptions": {"stream": False, "temperature": temperature},
             "messages": messages,
         },
     )

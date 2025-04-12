@@ -1,37 +1,42 @@
-from llama_index.llms.openai_like import OpenAILike
-
 from repo_agent.doc_meta_info import DocItem
 from repo_agent.log import logger
 from repo_agent.prompt import chat_template
 from repo_agent.settings import SettingsManager
-from llm import *
+
+from llama_index.llms.openai_like import OpenAILike
+from llm.yagpt import yandex_gpt
+
+# from llm.gpt import ask_gpt  - возьмем нормальный GPT из OpenAILike
+from llm.gigachat import gigachat_gpt
 
 
 class ChatEngine:
-    """
-    ChatEngine is used to generate the doc of functions or classes.
-    """
+    def __init__(self, project_manager, model_name="openai", temperature=0.6):
+        self.model_name = model_name.lower()
+        self.temperature = temperature
+        self.project_manager = project_manager
 
-    def __init__(self, project_manager):
-        setting = SettingsManager.get_setting()
+        if self.model_name == "openai":
+            from llama_index.llms.openai_like import OpenAILike
 
-        self.llm = OpenAILike(
-            api_key=setting.chat_completion.openai_api_key.get_secret_value(),
-            api_base=setting.chat_completion.openai_base_url,
-            timeout=setting.chat_completion.request_timeout,
-            model=setting.chat_completion.model,
-            temperature=setting.chat_completion.temperature,
-            max_retries=1,
-            is_chat_model=True,
-        )
+            setting = SettingsManager.get_setting()
+            self.llm = OpenAILike(
+                api_key=setting.chat_completion.openai_api_key.get_secret_value(),
+                api_base=setting.chat_completion.openai_base_url,
+                timeout=setting.chat_completion.request_timeout,
+                model=setting.chat_completion.model,
+                temperature=self.temperature,
+                max_retries=1,
+                is_chat_model=True,
+            )
+        elif self.model_name not in {"yagpt", "gigachat"}:
+            raise ValueError(f"Unsupported model: {self.model_name}")
 
     def build_prompt(self, doc_item: DocItem):
-        """Builds and returns the system and user prompts based on the DocItem."""
         setting = SettingsManager.get_setting()
 
         code_info = doc_item.content
         referenced = len(doc_item.who_reference_me) > 0
-
         code_type = code_info["type"]
         code_name = code_info["name"]
         code_content = code_info["code_content"]
@@ -39,56 +44,49 @@ class ChatEngine:
         file_path = doc_item.get_full_name()
 
         def get_referenced_prompt(doc_item: DocItem) -> str:
-            if len(doc_item.reference_who) == 0:
+            if not doc_item.reference_who:
                 return ""
-            prompt = [
-                """As you can see, the code calls the following objects, their code and docs are as following:"""
-            ]
+            prompt = ["As you can see, the code calls the following objects:"]
             for reference_item in doc_item.reference_who:
-                instance_prompt = (
-                    f"""obj: {reference_item.get_full_name()}\nDocument: \n{reference_item.md_content[-1] if len(reference_item.md_content) > 0 else 'None'}\nRaw code:```\n{reference_item.content['code_content'] if 'code_content' in reference_item.content.keys() else ''}\n```"""
-                    + "=" * 10
+                prompt.append(
+                    f"""obj: {reference_item.get_full_name()}
+Document:\n{reference_item.md_content[-1] if reference_item.md_content else 'None'}
+Raw code:\n{reference_item.content.get("code_content", "")}\n{"=" * 10}"""
                 )
-                prompt.append(instance_prompt)
             return "\n".join(prompt)
 
         def get_referencer_prompt(doc_item: DocItem) -> str:
-            if len(doc_item.who_reference_me) == 0:
+            if not doc_item.who_reference_me:
                 return ""
-            prompt = [
-                """Also, the code has been called by the following objects, their code and docs are as following:"""
-            ]
+            prompt = ["Also, the code has been called by the following objects:"]
             for referencer_item in doc_item.who_reference_me:
-                instance_prompt = (
-                    f"""obj: {referencer_item.get_full_name()}\nDocument: \n{referencer_item.md_content[-1] if len(referencer_item.md_content) > 0 else 'None'}\nRaw code:```\n{referencer_item.content['code_content'] if 'code_content' in referencer_item.content.keys() else 'None'}\n```"""
-                    + "=" * 10
+                prompt.append(
+                    f"""obj: {referencer_item.get_full_name()}
+Document:\n{referencer_item.md_content[-1] if referencer_item.md_content else 'None'}
+Raw code:\n{referencer_item.content.get("code_content", "None")}\n{"=" * 10}"""
                 )
-                prompt.append(instance_prompt)
             return "\n".join(prompt)
 
-        def get_relationship_description(referencer_content, reference_letter):
-            if referencer_content and reference_letter:
-                return "And please include the reference relationship with its callers and callees in the project from a functional perspective"
-            elif referencer_content:
-                return "And please include the relationship with its callers in the project from a functional perspective."
-            elif reference_letter:
-                return "And please include the relationship with its callees in the project from a functional perspective."
-            else:
-                return ""
+        def get_relationship_description(referencer, reference):
+            if referencer and reference:
+                return "And please include the reference relationship with its callers and callees..."
+            elif referencer:
+                return "And please include the relationship with its callers..."
+            elif reference:
+                return "And please include the relationship with its callees..."
+            return ""
 
         code_type_tell = "Class" if code_type == "ClassDef" else "Function"
         parameters_or_attribute = (
             "attributes" if code_type == "ClassDef" else "parameters"
         )
         have_return_tell = (
-            "**Output Example**: Mock up a possible appearance of the code's return value."
+            "**Output Example**: Mock up a possible appearance..."
             if have_return
             else ""
         )
         combine_ref_situation = (
-            "and combine it with its calling situation in the project,"
-            if referenced
-            else ""
+            "and combine it with its calling situation," if referenced else ""
         )
 
         referencer_content = get_referencer_prompt(doc_item)
@@ -115,19 +113,21 @@ class ChatEngine:
         )
 
     def generate_doc(self, doc_item: DocItem):
-        """Generates documentation for a given DocItem."""
         messages = self.build_prompt(doc_item)
+        user_prompt = messages[-1]["content"]
 
         try:
-            response = self.llm.chat(messages)
-            logger.debug(f"LLM Prompt Tokens: {response.raw.usage.prompt_tokens}")  # type: ignore
-            logger.debug(
-                f"LLM Completion Tokens: {response.raw.usage.completion_tokens}"  # type: ignore
-            )
-            logger.debug(
-                f"Total LLM Token Count: {response.raw.usage.total_tokens}"  # type: ignore
-            )
-            return response.message.content
+            if self.model_name == "openai":
+                response = self.llm.chat(messages)
+                logger.debug(f"OpenAI Tokens: {response.raw.usage.total_tokens}")
+                return response.message.content
+
+            elif self.model_name == "yagpt":
+                return yandex_gpt(user_prompt, model="4", temperature=self.temperature)
+
+            elif self.model_name == "gigachat":
+                return gigachat_gpt(user_prompt, temperature=self.temperature)
+
         except Exception as e:
-            logger.error(f"Error in llamaindex chat call: {e}")
+            logger.error(f"Error in model call: {e}")
             raise
