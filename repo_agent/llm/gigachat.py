@@ -2,7 +2,9 @@ from __future__ import annotations
 import requests
 import json
 import uuid
+import time
 import yaml
+from repo_agent.log import logger
 
 with open("config.yaml", "r", encoding="utf8") as f:
     config = yaml.load(f, Loader=yaml.FullLoader)
@@ -30,7 +32,7 @@ def get_token() -> str:
     return data["access_token"]
 
 
-def gigachat_gpt(prom: str):
+def gigachat_gpt(prom: str, temperature: float = 0.8):
     """
     :param prom:
     :return: data['choices'][0]['message']['content'] (возвращаем сгенерированные данные)
@@ -40,7 +42,7 @@ def gigachat_gpt(prom: str):
         {
             "model": "GigaChat",
             "messages": [{"role": "user", "content": prom}],
-            "temperature": 1,
+            "temperature": temperature,
             "top_p": 0.1,
             "n": 1,
             "stream": False,
@@ -53,12 +55,15 @@ def gigachat_gpt(prom: str):
         "Accept": "application/json",
         "Authorization": "Bearer " + get_token(),
     }
-    response = requests.request(
-        "POST",
-        config["links"]["gigachat_gpt_link"],
-        headers=headers,
-        data=payload,
-        verify=False,
-    )
-    data = response.json()
-    return data["choices"][0]["message"]["content"]
+    # response = requests.request(
+    #     "POST",
+    #     config["links"]["gigachat_gpt_link"],
+    #     headers=headers,
+    #     data=payload,
+    #     verify=False,
+    # )
+    # data = response.json()
+    data = 'Hello world!'   # отладка!
+    time.sleep(1)
+    # logger.info(data)
+    return data # data["choices"][0]["message"]["content"]

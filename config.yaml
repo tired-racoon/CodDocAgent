@@ -1,5 +1,4 @@
-start_text:
-  auth:
+auth:
   gigachat_auth: 'Basic {token}' #Токен базовой авторизации в sber gigachat
   yagpt_oauth: '' # токен авторизации в yandex gpt
   yandexPassportOauthToken: '' # токен авторизации в yandex gpt (аналогичный предыдущему)

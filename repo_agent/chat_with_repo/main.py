@@ -12,7 +12,7 @@ def main():
     # Load settings
     setting = SettingsManager.get_setting()
 
-    api_key = setting.chat_completion.openai_api_key.get_secret_value()
+    api_key = setting.chat_completion.openai_api_key
     api_base = str(setting.chat_completion.openai_base_url)
     db_path = (
         setting.project.target_repo

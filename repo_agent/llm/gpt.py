@@ -6,7 +6,7 @@ from ..utils import log
 logger = log.logger()
 
 
-def ask_gpt(prom: str) -> str:
+def ask_gpt(prom: str, temperature=0.6) -> str:
     """
     :param prom:
     :return: response.choices[0].message.content (возвращаем сгенерированные данные)
@@ -15,9 +15,10 @@ def ask_gpt(prom: str) -> str:
     try:
         client = Client()
         response = client.chat.completions.create(
-            model="gpt-3.5-turbo",
-            messages=[{"role": "user", "content": prom}],
-        )
+        model="gpt-3.5-turbo",
+        messages=[{"role": "user", "content": prom}],
+        temperature=temperature
+    )
     except Exception as e:
         logger.error(e)
         response.choices[0].message.content = (

@@ -2,6 +2,10 @@ from repo_agent.doc_meta_info import DocItem
 from repo_agent.log import logger
 from repo_agent.prompt import chat_template
 from repo_agent.settings import SettingsManager
+import sys
+import os
+
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from llama_index.llms.openai_like import OpenAILike
 from llm.yagpt import yandex_gpt
@@ -15,13 +19,13 @@ class ChatEngine:
         self.model_name = model_name.lower()
         self.temperature = temperature
         self.project_manager = project_manager
-
+        logger.info(f'Model name set to {self.model_name}')
         if self.model_name == "openai":
             from llama_index.llms.openai_like import OpenAILike
 
             setting = SettingsManager.get_setting()
             self.llm = OpenAILike(
-                api_key=setting.chat_completion.openai_api_key.get_secret_value(),
+                api_key=setting.chat_completion.openai_api_key,
                 api_base=setting.chat_completion.openai_base_url,
                 timeout=setting.chat_completion.request_timeout,
                 model=setting.chat_completion.model,
@@ -114,8 +118,9 @@ Raw code:\n{referencer_item.content.get("code_content", "None")}\n{"=" * 10}"""
 
     def generate_doc(self, doc_item: DocItem):
         messages = self.build_prompt(doc_item)
-        user_prompt = messages[-1]["content"]
-
+        user_prompt = messages[-1].content
+        logger.info(f'Used model {self.model_name}')
+        logger.info(user_prompt)
         try:
             if self.model_name == "openai":
                 response = self.llm.chat(messages)

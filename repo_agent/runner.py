@@ -20,6 +20,10 @@ from repo_agent.multi_task_dispatch import worker
 from repo_agent.project_manager import ProjectManager
 from repo_agent.settings import SettingsManager
 from repo_agent.utils.meta_info_utils import delete_fake_files, make_fake_files
+import yaml
+
+with open("config.yaml", "r", encoding="utf8") as f:
+    config = yaml.load(f, Loader=yaml.FullLoader)
 
 
 class Runner:
@@ -36,7 +40,7 @@ class Runner:
         self.change_detector = ChangeDetector(
             repo_path=self.setting.project.target_repo
         )
-        self.chat_engine = ChatEngine(project_manager=self.project_manager)
+        self.chat_engine = ChatEngine(project_manager=self.project_manager, model_name=self.setting.chat_completion.model)
 
         if not self.absolute_project_hierarchy_path.exists():
             file_path_reflections, jump_files = make_fake_files()
@@ -112,21 +116,8 @@ class Runner:
         self.meta_info.print_task_list(task_manager.task_dict)
 
         try:
-            threads = [
-                threading.Thread(
-                    target=worker,
-                    args=(
-                        task_manager,
-                        process_id,
-                        self.generate_doc_for_a_single_item,
-                    ),
-                )
-                for process_id in range(self.setting.project.max_thread_count)
-            ]
-            for thread in threads:
-                thread.start()
-            for thread in threads:
-                thread.join()
+            for process_id in range(self.setting.project.max_thread_count):
+                worker(task_manager, process_id, self.generate_doc_for_a_single_item)
 
             self.markdown_refresh()
 
@@ -286,17 +277,8 @@ class Runner:
                 "No tasks in the queue, all documents are completed and up to date."
             )
 
-        threads = [
-            threading.Thread(
-                target=worker,
-                args=(task_manager, process_id, self.generate_doc_for_a_single_item),
-            )
-            for process_id in range(self.setting.project.max_thread_count)
-        ]
-        for thread in threads:
-            thread.start()
-        for thread in threads:
-            thread.join()
+        for process_id in range(self.setting.project.max_thread_count):
+            worker(task_manager, process_id, self.generate_doc_for_a_single_item)
 
         self.meta_info.in_generation_process = False
         self.meta_info.document_version = self.change_detector.repo.head.commit.hexsha
@@ -345,6 +327,7 @@ class Runner:
             code_info = file_handler.get_obj_code_info(
                 structure_type, name, start_line, end_line, parent, params
             )
+            logger.info(code_info)
             response_message = self.chat_engine.generate_doc(code_info, file_handler)
             md_content = response_message.content
             code_info["md_content"] = md_content

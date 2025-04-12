@@ -332,7 +332,6 @@ class MetaInfo:
 
     @staticmethod
     def from_checkpoint_path(checkpoint_dir_path: Path) -> MetaInfo:
-        """从已有的metainfo dir里面读取metainfo"""
         setting = SettingsManager.get_setting()
 
         project_hierarchy_json_path = checkpoint_dir_path / "project_hierarchy.json"
@@ -625,7 +624,7 @@ class MetaInfo:
             for referenced_item in target_item.reference_who:
                 if referenced_item.multithread_task_id in task_manager.task_dict.keys():
                     item_denp_task_ids.append(referenced_item.multithread_task_id)
-            item_denp_task_ids = list(set(item_denp_task_ids))  # 去重
+            item_denp_task_ids = list(set(item_denp_task_ids))  
             if task_available_func == None or task_available_func(target_item):
                 task_id = task_manager.add_task(
                     dependency_task_id=item_denp_task_ids, extra=target_item

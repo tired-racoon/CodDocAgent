@@ -1,4 +1,5 @@
 from enum import StrEnum
+import yaml
 from typing import Optional
 
 from iso639 import Language, LanguageNotFoundError
@@ -14,6 +15,8 @@ from pydantic import (
 from pydantic_settings import BaseSettings
 from pathlib import Path
 
+with open("config.yaml", "r", encoding="utf8") as f:
+    config = yaml.load(f, Loader=yaml.FullLoader)
 
 class LogLevel(StrEnum):
     DEBUG = "DEBUG"
@@ -54,13 +57,17 @@ class ProjectSettings(BaseSettings):
             return LogLevel(v)
         raise ValueError(f"Invalid log level: {v}")
 
+def get_openai_key() -> str:
+    with open("config.yaml", "r", encoding="utf8") as f:
+        config = yaml.load(f, Loader=yaml.FullLoader)
+    return config['auth']['openai_key']
 
 class ChatCompletionSettings(BaseSettings):
     model: str = "gpt-4o-mini"  # TODO
     temperature: PositiveFloat = 0.2
     request_timeout: PositiveInt = 60
     openai_base_url: str = "https://api.openai.com/v1"  # TODO
-    openai_api_key: SecretStr = Field(..., exclude=True)
+    openai_api_key: str = get_openai_key()
 
     @field_validator("openai_base_url", mode="before")
     @classmethod
