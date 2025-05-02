@@ -624,7 +624,7 @@ class MetaInfo:
             for referenced_item in target_item.reference_who:
                 if referenced_item.multithread_task_id in task_manager.task_dict.keys():
                     item_denp_task_ids.append(referenced_item.multithread_task_id)
-            item_denp_task_ids = list(set(item_denp_task_ids))  
+            item_denp_task_ids = list(set(item_denp_task_ids))
             if task_available_func == None or task_available_func(target_item):
                 task_id = task_manager.add_task(
                     dependency_task_id=item_denp_task_ids, extra=target_item

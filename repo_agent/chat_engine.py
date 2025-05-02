@@ -19,7 +19,7 @@ class ChatEngine:
         self.model_name = model_name.lower()
         self.temperature = temperature
         self.project_manager = project_manager
-        logger.info(f'Model name set to {self.model_name}')
+        logger.info(f"Model name set to {self.model_name}")
         if self.model_name == "openai":
             from llama_index.llms.openai_like import OpenAILike
 
@@ -118,10 +118,10 @@ Raw code:\n{referencer_item.content.get("code_content", "None")}\n{"=" * 10}"""
 
     def generate_doc(self, doc_item: DocItem):
         messages = self.build_prompt(doc_item)
-        user_prompt = ''
+        user_prompt = ""
         for message in messages:
-            user_prompt += message.content + '\n'
-        logger.info(f'Used model {self.model_name}')
+            user_prompt += message.content + "\n"
+        logger.info(f"Used model {self.model_name}")
         try:
             if self.model_name == "openai":
                 response = self.llm.chat(messages)
@@ -129,7 +129,7 @@ Raw code:\n{referencer_item.content.get("code_content", "None")}\n{"=" * 10}"""
                 return response.message.content
 
             elif self.model_name == "yagpt":
-                return yandex_gpt(user_prompt, model="4", temperature=self.temperature)
+                return yandex_gpt(user_prompt, model="3", temperature=self.temperature)
 
             elif self.model_name == "gigachat":
                 return gigachat_gpt(user_prompt, temperature=self.temperature)

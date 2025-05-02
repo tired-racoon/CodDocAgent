@@ -2,6 +2,7 @@ from __future__ import annotations
 import requests
 import json
 import yaml
+from repo_agent.log import logger
 
 
 with open("config.yaml", "r", encoding="utf8") as f:
@@ -33,7 +34,7 @@ def yandex_gpt(prom: str, model: str, temperature=0.6, old_prompt="", old_respon
     """
     model_uri = ""
     if model == "3":
-        model_uri = "gpt://" + config["auth"]["folder_id"] + "/yandexgpt/latest"
+        model_uri = "gpt://" + config["auth"]["folder_id"] + "/yandexgpt-lite/latest"
     if model == "4":
         model_uri = "gpt://" + config["auth"]["folder_id"] + "/yandexgpt-32k/rc"
     if old_prompt == "" and old_response == "":
@@ -47,7 +48,7 @@ def yandex_gpt(prom: str, model: str, temperature=0.6, old_prompt="", old_respon
     response = requests.post(
         config["links"]["yandex_gpt_api_url"],
         headers={
-            "Authorization": f"Api-Key {config['auth']['yandexgpt_key']}",
+            "Authorization": f"Bearer {config['auth']['yandexgpt_key']}",
             "x-folder-id": config["auth"]["folder_id"],
         },
         json={
