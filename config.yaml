@@ -3,7 +3,7 @@ auth:
   yagpt_oauth: '' # токен авторизации в yandex gpt
   yandexPassportOauthToken: '' # токен авторизации в yandex gpt (аналогичный предыдущему)
   folder_id: '' # folder id в личном кабинете yandexgpt
-  yandexgpt_key: '' # Ключ yandexgpt
+  yandexgpt_key: '' # IAM-токен
   openai_key: '' # ключ OpenAI api
 links:
   gigachat_auth_link: 'https://ngw.devices.sberbank.ru:9443/api/v2/oauth'
