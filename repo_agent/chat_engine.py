@@ -118,9 +118,10 @@ Raw code:\n{referencer_item.content.get("code_content", "None")}\n{"=" * 10}"""
 
     def generate_doc(self, doc_item: DocItem):
         messages = self.build_prompt(doc_item)
-        user_prompt = messages[-1].content
+        user_prompt = ''
+        for message in messages:
+            user_prompt += message.content + '\n'
         logger.info(f'Used model {self.model_name}')
-        logger.info(user_prompt)
         try:
             if self.model_name == "openai":
                 response = self.llm.chat(messages)

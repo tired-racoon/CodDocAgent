@@ -40,7 +40,10 @@ class Runner:
         self.change_detector = ChangeDetector(
             repo_path=self.setting.project.target_repo
         )
-        self.chat_engine = ChatEngine(project_manager=self.project_manager, model_name=self.setting.chat_completion.model)
+        self.chat_engine = ChatEngine(
+            project_manager=self.project_manager,
+            model_name=self.setting.chat_completion.model,
+        )
 
         if not self.absolute_project_hierarchy_path.exists():
             file_path_reflections, jump_files = make_fake_files()
@@ -100,7 +103,6 @@ class Runner:
             doc_item.item_status = DocItemStatus.doc_has_not_been_generated
 
     def first_generate(self):
-
         logger.info("Starting to generate documentation")
         check_task_available_func = partial(
             need_to_generate, ignore_list=self.setting.project.ignore_list
@@ -116,21 +118,7 @@ class Runner:
         self.meta_info.print_task_list(task_manager.task_dict)
 
         try:
-            threads = [
-                threading.Thread(
-                    target=worker,
-                    args=(
-                        task_manager,
-                        process_id,
-                        self.generate_doc_for_a_single_item,
-                    ),
-                )
-                for process_id in range(self.setting.project.max_thread_count)
-            ]
-            for thread in threads:
-                thread.start()
-            for thread in threads:
-                thread.join()
+            worker(task_manager, self.generate_doc_for_a_single_item)
 
             self.markdown_refresh()
 
@@ -290,17 +278,7 @@ class Runner:
                 "No tasks in the queue, all documents are completed and up to date."
             )
 
-        threads = [
-            threading.Thread(
-                target=worker,
-                args=(task_manager, process_id, self.generate_doc_for_a_single_item),
-            )
-            for process_id in range(self.setting.project.max_thread_count)
-        ]
-        for thread in threads:
-            thread.start()
-        for thread in threads:
-            thread.join()
+        worker(task_manager, self.generate_doc_for_a_single_item)
 
         self.meta_info.in_generation_process = False
         self.meta_info.document_version = self.change_detector.repo.head.commit.hexsha

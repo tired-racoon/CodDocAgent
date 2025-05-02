@@ -64,3 +64,4 @@ def gigachat_gpt(prom: str, temperature: float = 0.8):
     data = response.json()
     # logger.info(data)
     return data["choices"][0]["message"]["content"]
+    # return 'Hello world'
