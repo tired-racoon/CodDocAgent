@@ -116,8 +116,21 @@ class Runner:
         self.meta_info.print_task_list(task_manager.task_dict)
 
         try:
-            for process_id in range(self.setting.project.max_thread_count):
-                worker(task_manager, process_id, self.generate_doc_for_a_single_item)
+            threads = [
+                threading.Thread(
+                    target=worker,
+                    args=(
+                        task_manager,
+                        process_id,
+                        self.generate_doc_for_a_single_item,
+                    ),
+                )
+                for process_id in range(self.setting.project.max_thread_count)
+            ]
+            for thread in threads:
+                thread.start()
+            for thread in threads:
+                thread.join()
 
             self.markdown_refresh()
 
@@ -277,8 +290,17 @@ class Runner:
                 "No tasks in the queue, all documents are completed and up to date."
             )
 
-        for process_id in range(self.setting.project.max_thread_count):
-            worker(task_manager, process_id, self.generate_doc_for_a_single_item)
+        threads = [
+            threading.Thread(
+                target=worker,
+                args=(task_manager, process_id, self.generate_doc_for_a_single_item),
+            )
+            for process_id in range(self.setting.project.max_thread_count)
+        ]
+        for thread in threads:
+            thread.start()
+        for thread in threads:
+            thread.join()
 
         self.meta_info.in_generation_process = False
         self.meta_info.document_version = self.change_detector.repo.head.commit.hexsha
