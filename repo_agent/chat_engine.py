@@ -129,7 +129,7 @@ Raw code:\n{referencer_item.content.get("code_content", "None")}\n{"=" * 10}"""
                 return response.message.content
 
             elif self.model_name == "yagpt":
-                return yandex_gpt(user_prompt, model="3", temperature=self.temperature)
+                return yandex_gpt(user_prompt, temperature=self.temperature)
 
             elif self.model_name == "gigachat":
                 return gigachat_gpt(user_prompt, temperature=self.temperature)

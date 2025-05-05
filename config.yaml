@@ -12,3 +12,5 @@ links:
   yandex_gpt_token_url: 'https://iam.api.cloud.yandex.net/iam/v1/tokens'
   wiki_url: '' # Ссылка на ваш confluence TODO
   testit_url: '' #Ссылка на ваш TestIT
+models:
+  yagpt: 'lite4'

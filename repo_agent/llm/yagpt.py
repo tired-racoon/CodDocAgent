@@ -21,7 +21,7 @@ def getToken() -> str:
     return data["iamToken"]
 
 
-def yandex_gpt(prom: str, model: str, temperature=0.6, old_prompt="", old_response=""):
+def yandex_gpt(prom: str, temperature=0.6, old_prompt="", old_response=""):
     """
     :param prom:
     :param model:
@@ -33,10 +33,40 @@ def yandex_gpt(prom: str, model: str, temperature=0.6, old_prompt="", old_respon
     параметры old_prompt и old_response используются для генерации дополнительных кейсов через функцию /getMoreCases
     """
     model_uri = ""
-    if model == "3":
+    model = config['models']['yagpt']
+    if model == "lite4":
         model_uri = "gpt://" + config["auth"]["folder_id"] + "/yandexgpt-lite/latest"
-    if model == "4":
-        model_uri = "gpt://" + config["auth"]["folder_id"] + "/yandexgpt-32k/rc"
+    elif model == "pro4":
+        model_uri = "gpt://" + config["auth"]["folder_id"] + "/yandexgpt/latest"
+    elif model == "lite5":
+        model_uri = "gpt://" + config["auth"]["folder_id"] + "/yandexgpt-lite/rc"
+    elif model == "pro5":
+        model_uri = "gpt://" + config["auth"]["folder_id"] + "/yandexgpt/rc"
+    elif model == "llama8b":
+        model_uri = "gpt://" + config["auth"]["folder_id"] + "/llama-lite/rc"
+    elif model == "llama70b":
+        model_uri = "gpt://" + config["auth"]["folder_id"] + "/llama/rc"
+    # ниже идут пакетные модели
+    elif model == "qwen2.5i-7b":
+        model_uri = "gpt://" + config["auth"]["folder_id"] + "qwen2.5-7b-instruct"
+    elif model == "qwen2.5i-72b":
+        model_uri = "gpt://" + config["auth"]["folder_id"] + "qwen2.5-72b-instruct"
+    elif model == "deepseek-r1-qwen32b":
+        model_uri = (
+            "gpt://" + config["auth"]["folder_id"] + "deepseek-r1-distill-qwen-32b"
+        )
+    elif model == "gemma12b":
+        model_uri = "gpt://" + config["auth"]["folder_id"] + "gemma-3-12b-it"
+    elif model == "gemma27b":
+        model_uri = "gpt://" + config["auth"]["folder_id"] + "gemma-3-27b-it"
+    elif model == "qwen3-8b":
+        model_uri = "gpt://" + config["auth"]["folder_id"] + "qwen3-8b"
+    elif model == "qwen3-14b":
+        model_uri = "gpt://" + config["auth"]["folder_id"] + "qwen3-14b"
+    elif model == "qwen3-32b":
+        model_uri = "gpt://" + config["auth"]["folder_id"] + "qwen3-32b"
+    else:
+        raise ValueError('Model name in config is incorrect')
     if old_prompt == "" and old_response == "":
         messages = [{"role": "user", "text": prom}]
     else:

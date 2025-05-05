@@ -28,6 +28,28 @@
   <a href="https://github.com/LOGIC-10/RepoAgent/blob/main/README_CN.md">简体中文 readme</a>
 </p>
 
+## Список доступных моделей
+
+
+1. `lite4` (`YandexGPT Lite-4`)
+2. `pro4` (`YandexGPT Pro-4`)
+3. `lite5` (`YandexGPT Lite-5`)
+4. `pro5` (`YandexGPT Pro-5`)
+5. `llama8b`
+6. `llama70b`
+7. `gigachat` (`GigaChat-Lite`)
+
+### Пакетный тариф (подходит для больших репозиториев)
+
+8. `qwen2.5i-7b` (`qwen2.5-7b-instruct`)
+9. `qwen2.5i-72b` (`qwen2.5-72b-instruct`)
+10. `deepseek-r1-qwen32b` (`deepseek-r1-distill-qwen-32b`)
+11. `gemma12b` (`gemma-3-12b-it`)
+12. `gemma27b` (`gemma-3-27b-it`)
+13. `qwen3-8b`
+14. `qwen3-14b`
+15. `qwen3-32b`
+
 ## :tv: Demo
 
 [![Watch the video](https://img.youtube.com/vi/YPPJBVOP71M/hqdefault.jpg)](https://youtu.be/YPPJBVOP71M)
