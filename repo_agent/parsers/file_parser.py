@@ -6,10 +6,10 @@ import tree_sitter_go as tsgo
 import tree_sitter_kotlin as tskotlin
 
 LANGUAGE_MAPPING = {
-    'python': Language(tspython.language()),
-    'java': Language(tsjava.language()),
-    'go': Language(tsgo.language()),
-    'kotlin': Language(tskotlin.language()),
+    "python": Language(tspython.language()),
+    "java": Language(tsjava.language()),
+    "go": Language(tsgo.language()),
+    "kotlin": Language(tskotlin.language()),
 }
 
 
@@ -21,11 +21,11 @@ class TreeSitterParser:
         self.parser = Parser(self.ts_language)
 
     def parse_code(self, code: str):
-        tree = self.parser.parse(code.encode('utf8'))
+        tree = self.parser.parse(code.encode("utf8"))
         return tree.root_node
 
     def parse_file(self, filename: str):
-        with open(filename, 'r', encoding='utf-8') as f:
+        with open(filename, "r", encoding="utf-8") as f:
             code = f.read()
         return self.parse_code(code)
 

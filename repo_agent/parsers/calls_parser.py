@@ -32,7 +32,11 @@ class CallGraphBuilder:
                     parent_func = name
 
             elif language in ("java", "kotlin"):
-                if node.type in ("method_declaration", "class_declaration", "function_declaration"):
+                if node.type in (
+                    "method_declaration",
+                    "class_declaration",
+                    "function_declaration",
+                ):
                     name_node = node.child_by_field_name("name")
                     if name_node:
                         name = self._get_node_text(name_node, code)
@@ -41,10 +45,12 @@ class CallGraphBuilder:
                         functions.append((name, start_line, end_line))
                         parent_func = name
 
-            if node.type in ("call", "function_call"):
+            if (language == "go" and node.type == "call_expression") or (
+                language != "go" and node.type in ("call", "function_call")
+            ):
                 function_name_node = node.child_by_field_name("function")
                 if function_name_node:
-                    call_name = self._get_node_text(function_name_node, code)
+                    call_name = self._extract_function_name(function_name_node, code)
                     if parent_func and call_name:
                         calls.append((parent_func, call_name))
 
@@ -54,24 +60,37 @@ class CallGraphBuilder:
         walk(root)
         return functions, calls
 
+    def _extract_function_name(self, node: Node, code: bytes) -> str:
+        if node.type == "selector_expression":
+            left = self._extract_function_name(
+                node.child_by_field_name("operand"), code
+            )
+            right = self._extract_function_name(node.child_by_field_name("field"), code)
+            return f"{left}.{right}" if left and right else None
+        elif node.type == "identifier":
+            return self._get_node_text(node, code)
+        else:
+            return self._get_node_text(node, code)
+
     def _get_node_text(self, node, code: bytes):
         if not node:
             return None
         # Берём срез из байтов и декодируем в строку
-        return code[node.start_byte:node.end_byte].decode("utf8")
+        return code[node.start_byte : node.end_byte].decode("utf8")
 
     def process_file(self, file_path: str, language: str):
         parser = TreeSitterParser(language)
         root = parser.parse_file(file_path)
-        with open(file_path, 'r', encoding='utf-8') as f:
+        with open(file_path, "r", encoding="utf-8") as f:
             code = f.read()
-        functions, calls = self.extract_functions_and_calls(root, language, code.encode('utf-8'))
+        functions, calls = self.extract_functions_and_calls(
+            root, language, code.encode("utf-8")
+        )
         for func_name, _, _ in functions:
             self.call_graph[func_name]
         for caller, callee in calls:
             self.call_graph[caller]["calls"].add(callee)
             self.call_graph[callee]["called_by"].add(caller)
-
 
     def build_from_repo(self):
         for root, _, files in os.walk(self.repo_path):
