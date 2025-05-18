@@ -18,6 +18,12 @@ dependencies = [
     "python-iso639>=2024.10.22",
     "colorama>=0.4.6",
     "llama-index-llms-openai-like>=0.3.3",
+    "tree-sitter>=0.24.0",
+    "tree-sitter-languages>=1.10.2",
+    "tree-sitter-python>=0.23.6",
+    "tree-sitter-java>=0.23.5",
+    "tree-sitter-go>=0.23.4",
+    "tree-sitter-kotlin>=1.1.0",
 ]
 name = "repoagent"
 version = "0.2.0"
