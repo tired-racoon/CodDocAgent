@@ -8,7 +8,6 @@ from enum import Enum, auto, unique
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional
 
-import jedi
 from colorama import Fore, Style
 from prettytable import PrettyTable
 from tqdm import tqdm
@@ -17,8 +16,8 @@ from repo_agent.file_handler import FileHandler
 from repo_agent.log import logger
 from repo_agent.multi_task_dispatch import Task, TaskManager
 from repo_agent.settings import SettingsManager
-from repo_agent.utils.meta_info_utils import latest_verison_substring
-
+from repo_agent.utils.meta_info_utils import is_latest_version_file_regex
+from repo_agent.references_finder import ReferenceFinder
 
 @unique
 class EdgeType(Enum):
@@ -101,6 +100,7 @@ def need_to_generate(doc_item: DocItem, ignore_list: List[str] = []) -> bool:
         doc_item = doc_item.father
     return False
 
+SUPPORTED_EXTENSIONS = (".py", ".java", ".go", ".kt", ".kts")
 
 @dataclass
 class DocItem:
@@ -130,6 +130,12 @@ class DocItem:
     has_task: bool = False
 
     multithread_task_id: int = -1
+
+    def __eq__(self, other):
+        if not isinstance(other, DocItem):
+            return False
+        return self.get_full_name() == other.get_full_name()
+
 
     @staticmethod
     def has_ans_relation(now_a: DocItem, now_b: DocItem):
@@ -186,8 +192,14 @@ class DocItem:
             child.parse_tree_path(self.tree_path)
 
     def get_file_name(self):
+        """Get file name with proper extension handling for all supported languages"""
         full_name = self.get_full_name()
-        return full_name.split(".py")[0] + ".py"
+        
+        base_name, ext = os.path.splitext(full_name)
+        if ext.lower() in [".py", ".java", ".go", ".kt", ".kts"]:
+            return base_name + ext
+        else:
+            return full_name
 
     def get_full_name(self, strict=False):
 
@@ -272,7 +284,7 @@ class DocItem:
 def find_all_referencer(
     repo_path, variable_name, file_path, line_number, column_number, in_file_only=False
 ):
-    script = jedi.Script(path=os.path.join(repo_path, file_path))
+    script = ReferenceFinder(repo_path, file_path)
     try:
         if in_file_only:
             references = script.get_references(
@@ -280,6 +292,8 @@ def find_all_referencer(
             )
         else:
             references = script.get_references(line=line_number, column=column_number)
+        # print(references)
+        
         variable_references = [ref for ref in references if ref.name == variable_name]
         # if variable_name == "need_to_generate":
         #     import pdb; pdb.set_trace()
@@ -467,7 +481,7 @@ class MetaInfo:
             white_list_obj_names = [cont["id_text"] for cont in self.white_list]
 
         for file_node in tqdm(file_nodes, desc="parsing bidirectional reference"):
-            assert not file_node.get_full_name().endswith(latest_verison_substring)
+            assert not is_latest_version_file_regex(file_node.get_full_name())
 
             ref_count = 0
             rel_file_path = file_node.get_full_name()
@@ -508,18 +522,6 @@ class MetaInfo:
                         continue
 
                     target_file_hiera = referencer_file_ral_path.split("/")
-                    # for file_hiera_id in range(len(target_file_hiera)):
-                    #     if target_file_hiera[file_hiera_id].endswith(fake_file_substring):
-                    #         prefix = "/".join(target_file_hiera[:file_hiera_id+1])
-                    #         find_in_reflection = False
-                    #         for real, fake in self.fake_file_reflection.items():
-                    #             if fake == prefix:
-                    #                 print(f"{Fore.BLUE}Find Reference in Fake-File: {Style.RESET_ALL}{referencer_file_ral_path} {Fore.BLUE}referred{Style.RESET_ALL} {now_obj.item_type.name} {now_obj.get_full_name()}")
-                    #                 target_file_hiera = real.split("/") + target_file_hiera[file_hiera_id+1:]
-                    #                 find_in_reflection = True
-                    #                 break
-                    #         assert find_in_reflection
-                    #         break
 
                     referencer_file_item = self.target_repo_hierarchical_tree.find(
                         target_file_hiera
@@ -534,7 +536,7 @@ class MetaInfo:
                     )
                     if referencer_node.obj_name == now_obj.obj_name:
                         logger.info(
-                            f"Jedi find {now_obj.get_full_name()} with name_duplicate_reference, skipped"
+                            f"ReferenceFinder find {now_obj.get_full_name()} with name_duplicate_reference, skipped"
                         )
                         continue
                     # if now_obj.get_full_name() == "repo_agent/runner.py/Runner/run":

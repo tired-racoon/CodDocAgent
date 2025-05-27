@@ -44,7 +44,7 @@ class ChangeDetector:
         diffs = repo.index.diff("HEAD", R=True)
 
         for diff in diffs:
-            if diff.change_type in ["A", "M"] and diff.a_path.endswith(".py"):
+            if diff.change_type in ["A", "M"] and diff.a_path.endswith((".py", ".java", ".go", ".kt", ".kts")):
                 is_new_file = diff.change_type == "A"
                 staged_files[diff.a_path] = is_new_file
 
@@ -174,26 +174,26 @@ class ChangeDetector:
             if untracked_file.startswith(setting.project.markdown_docs_name):
                 to_be_staged_files.append(untracked_file)
             continue
-            print(f"rel_untracked_file:{rel_untracked_file}")
-            # import pdb; pdb.set_trace()
-            if rel_untracked_file.endswith(".md"):
-                rel_untracked_file = os.path.relpath(
-                    rel_untracked_file, setting.project.markdown_docs_name
-                )
-                corresponding_py_file = os.path.splitext(rel_untracked_file)[0] + ".py"
-                print(
-                    f"corresponding_py_file in untracked_files:{corresponding_py_file}"
-                )
-                if corresponding_py_file in staged_files:
-                    to_be_staged_files.append(
-                        os.path.join(
-                            self.repo_path.lstrip("/"),
-                            setting.project.markdown_docs_name,
-                            rel_untracked_file,
-                        )
-                    )
-            elif rel_untracked_file == project_hierarchy:
-                to_be_staged_files.append(rel_untracked_file)
+            # print(f"rel_untracked_file:{rel_untracked_file}")
+            # # import pdb; pdb.set_trace()
+            # if rel_untracked_file.endswith(".md"):
+            #     rel_untracked_file = os.path.relpath(
+            #         rel_untracked_file, setting.project.markdown_docs_name
+            #     )
+            #     corresponding_py_file = os.path.splitext(rel_untracked_file)[0] + ".py"
+            #     print(
+            #         f"corresponding_py_file in untracked_files:{corresponding_py_file}"
+            #     )
+            #     if corresponding_py_file in staged_files:
+            #         to_be_staged_files.append(
+            #             os.path.join(
+            #                 self.repo_path.lstrip("/"),
+            #                 setting.project.markdown_docs_name,
+            #                 rel_untracked_file,
+            #             )
+            #         )
+            # elif rel_untracked_file == project_hierarchy:
+            #     to_be_staged_files.append(rel_untracked_file)
 
         unstaged_files = [diff.b_path for diff in diffs]
         print(f"{Fore.LIGHTCYAN_EX}unstaged_files{Style.RESET_ALL}: {unstaged_files}")
@@ -208,25 +208,25 @@ class ChangeDetector:
             elif unstaged_file == project_hierarchy:
                 to_be_staged_files.append(unstaged_file)
             continue
-            abs_unstaged_file = os.path.join(self.repo_path, unstaged_file)
-            rel_unstaged_file = os.path.relpath(abs_unstaged_file, self.repo_path)
-            print(f"rel_unstaged_file:{rel_unstaged_file}")
-            if unstaged_file.endswith(".md"):
-                rel_unstaged_file = os.path.relpath(
-                    rel_unstaged_file, setting.project.markdown_docs_name
-                )
-                corresponding_py_file = os.path.splitext(rel_unstaged_file)[0] + ".py"
-                print(f"corresponding_py_file:{corresponding_py_file}")
-                if corresponding_py_file in staged_files:
-                    to_be_staged_files.append(
-                        os.path.join(
-                            self.repo_path.lstrip("/"),
-                            setting.project.markdown_docs_name,
-                            rel_unstaged_file,
-                        )
-                    )
-            elif unstaged_file == project_hierarchy:
-                to_be_staged_files.append(unstaged_file)
+            # abs_unstaged_file = os.path.join(self.repo_path, unstaged_file)
+            # rel_unstaged_file = os.path.relpath(abs_unstaged_file, self.repo_path)
+            # print(f"rel_unstaged_file:{rel_unstaged_file}")
+            # if unstaged_file.endswith(".md"):
+            #     rel_unstaged_file = os.path.relpath(
+            #         rel_unstaged_file, setting.project.markdown_docs_name
+            #     )
+            #     corresponding_py_file = os.path.splitext(rel_unstaged_file)[0] + ".py"
+            #     print(f"corresponding_py_file:{corresponding_py_file}")
+            #     if corresponding_py_file in staged_files:
+            #         to_be_staged_files.append(
+            #             os.path.join(
+            #                 self.repo_path.lstrip("/"),
+            #                 setting.project.markdown_docs_name,
+            #                 rel_unstaged_file,
+            #             )
+            #         )
+            # elif unstaged_file == project_hierarchy:
+            #     to_be_staged_files.append(unstaged_file)
         print(
             f"{Fore.LIGHTRED_EX}newly_staged_files{Style.RESET_ALL}: {to_be_staged_files}"
         )

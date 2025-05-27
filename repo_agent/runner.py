@@ -25,6 +25,9 @@ import yaml
 with open("config.yaml", "r", encoding="utf8") as f:
     config = yaml.load(f, Loader=yaml.FullLoader)
 
+def replace_extension_to_md(file_path: str) -> str:
+    path_obj = Path(file_path)
+    return str(path_obj.with_suffix('.md'))
 
 class Runner:
     def __init__(self):
@@ -60,23 +63,13 @@ class Runner:
         self.runner_lock = threading.Lock()
 
     def get_all_pys(self, directory):
-        """
-        Get all Python files in the given directory.
-
-        Args:
-            directory (str): The directory to search.
-
-        Returns:
-            list: A list of paths to all Python files.
-        """
-        python_files = []
+        code_files = []
 
         for root, dirs, files in os.walk(directory):
             for file in files:
-                if file.endswith(".py"):
-                    python_files.append(os.path.join(root, file))
-
-        return python_files
+                if file.endswith((".py", ".java", ".go", ".kt", ".kts")):
+                    code_files.append(os.path.join(root, file))
+        return code_files
 
     def generate_doc_for_a_single_item(self, doc_item: DocItem):
         try:
@@ -182,7 +175,8 @@ class Runner:
 
             file_path = Path(
                 self.setting.project.markdown_docs_name
-            ) / file_item.get_file_name().replace(".py", ".md")
+            ) / file_item.get_file_name()
+            file_path = replace_extension_to_md(file_path)
             abs_file_path = self.setting.project.target_repo / file_path
             logger.debug(f"Writing markdown to: {abs_file_path}")
 
@@ -346,7 +340,7 @@ class Runner:
             os.path.join(
                 self.project_manager.repo_path,
                 self.setting.project.markdown_docs_name,
-                file_handler.file_path.replace(".py", ".md"),
+                replace_extension_to_md(file_handler.file_path),
             ),
             markdown,
         )
@@ -397,7 +391,7 @@ class Runner:
             file_handler.write_file(
                 os.path.join(
                     self.setting.project.markdown_docs_name,
-                    file_handler.file_path.replace(".py", ".md"),
+                    replace_extension_to_md(file_handler.file_path),
                 ),
                 markdown,
             )
