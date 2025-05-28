@@ -463,7 +463,7 @@ class ReferenceFinder:
         return class_name, function_name
     
     def _is_likely_import_match(self, imports: Dict[str, Set[str]], target_path: str, 
-                              similarity_threshold: float = 0.6) -> bool:
+                              similarity_threshold: float = 0.4) -> bool:
         """Check if target_path likely matches any import using fuzzy matching"""
         all_imports = set()
         
@@ -510,7 +510,6 @@ class ReferenceFinder:
             return references
         
         try:
-            # Parse origin file to get imports
             abs_origin_path = os.path.join(self.repo_path, origin_file)
             parser = self._get_parser(origin_language)
             root = parser.parse_file(abs_origin_path)
@@ -521,21 +520,19 @@ class ReferenceFinder:
             code_bytes = code.encode("utf-8")
             imports = self._extract_imports(root, code_bytes, origin_language)
             
-            # Group references by file
             refs_by_file = defaultdict(list)
             for ref_file, ref_line, ref_col, ref_name in references:
                 refs_by_file[ref_file].append((ref_line, ref_col, ref_name))
             
             filtered_references = []
+            origin_rel_path = os.path.relpath(origin_file, self.repo_path)
             
             for ref_file, file_refs in refs_by_file.items():
-                # Skip same file references (always valid)
-                if ref_file == os.path.relpath(origin_file, self.repo_path):
+                if ref_file == origin_rel_path:
                     for ref_line, ref_col, ref_name in file_refs:
                         filtered_references.append((ref_file, ref_line, ref_col, ref_name))
                     continue
                 
-                # Analyze each reference in this file
                 ref_language = self._detect_language(ref_file)
                 if not ref_language:
                     continue
@@ -551,12 +548,17 @@ class ReferenceFinder:
                     ref_code_bytes = ref_code.encode("utf-8")
                     
                     for ref_line, ref_col, ref_name in file_refs:
-                        # Get context of the reference
                         class_name, func_name = self._find_function_context(
                             ref_root, ref_code_bytes, ref_language, ref_line, ref_col
                         )
                         
-                        # Build potential import paths
+                        is_local_definition = self._check_local_definition(
+                            ref_root, ref_code_bytes, ref_language, ref_name, ref_line, ref_col
+                        )
+                        
+                        if is_local_definition:
+                            continue
+                        
                         potential_paths = []
                         
                         if class_name and func_name:
@@ -568,12 +570,10 @@ class ReferenceFinder:
                                 abs_ref_path, func_name
                             ))
                         
-                        # Also add module-level path
                         potential_paths.append(self._get_function_full_path(
                             abs_ref_path, ref_name
                         ))
                         
-                        # Check if any potential path matches imports
                         is_valid = False
                         for path in potential_paths:
                             if self._is_likely_import_match(imports, path):
@@ -584,7 +584,6 @@ class ReferenceFinder:
                             filtered_references.append((ref_file, ref_line, ref_col, ref_name))
                 
                 except Exception as e:
-                    # On error, include references (conservative approach)
                     for ref_line, ref_col, ref_name in file_refs:
                         filtered_references.append((ref_file, ref_line, ref_col, ref_name))
             
@@ -592,7 +591,100 @@ class ReferenceFinder:
             
         except Exception as e:
             logger.error(f"Error in import-based filtering: {e}")
-            return references  # Return original on error
+            return references
+
+    def _check_local_definition(self, root: Node, code: bytes, language: str, 
+                            target_name: str, target_line: int, target_col: int) -> bool:
+        """Check if target function/class is defined locally in the same file"""
+        if language == "python":
+            return self._check_python_local_definition(root, code, target_name, target_line, target_col)
+        elif language == "java":
+            return self._check_java_local_definition(root, code, target_name, target_line, target_col)
+        elif language == "go":
+            return self._check_go_local_definition(root, code, target_name, target_line, target_col)
+        elif language == "kotlin":
+            return self._check_kotlin_local_definition(root, code, target_name, target_line, target_col)
+        return False
+
+    def _check_python_local_definition(self, root: Node, code: bytes, target_name: str, 
+                                    target_line: int, target_col: int) -> bool:
+        """Check if target is defined locally in Python file"""
+        def walk(node: Node):
+            if node.type in ("function_definition", "class_definition"):
+                name_node = node.child_by_field_name("name")
+                if name_node:
+                    name = self._get_node_text(name_node, code)
+                    if name == target_name:
+                        def_line = name_node.start_point[0] + 1
+                        if def_line != target_line:
+                            return True
+            
+            for child in node.children:
+                if walk(child):
+                    return True
+            return False
+        
+        return walk(root)
+
+    def _check_java_local_definition(self, root: Node, code: bytes, target_name: str,
+                                target_line: int, target_col: int) -> bool:
+        """Check if target is defined locally in Java file"""
+        def walk(node: Node):
+            if node.type in ("method_declaration", "class_declaration", "constructor_declaration"):
+                name_node = node.child_by_field_name("name")
+                if name_node:
+                    name = self._get_node_text(name_node, code)
+                    if name == target_name:
+                        def_line = name_node.start_point[0] + 1
+                        if def_line != target_line:
+                            return True
+            
+            for child in node.children:
+                if walk(child):
+                    return True
+            return False
+        
+        return walk(root)
+
+    def _check_go_local_definition(self, root: Node, code: bytes, target_name: str,
+                                target_line: int, target_col: int) -> bool:
+        """Check if target is defined locally in Go file"""
+        def walk(node: Node):
+            if node.type in ("function_declaration", "method_declaration"):
+                name_node = node.child_by_field_name("name")
+                if name_node:
+                    name = self._get_node_text(name_node, code)
+                    if name == target_name:
+                        def_line = name_node.start_point[0] + 1
+                        if def_line != target_line:
+                            return True
+            
+            for child in node.children:
+                if walk(child):
+                    return True
+            return False
+        
+        return walk(root)
+
+    def _check_kotlin_local_definition(self, root: Node, code: bytes, target_name: str,
+                                    target_line: int, target_col: int) -> bool:
+        """Check if target is defined locally in Kotlin file"""
+        def walk(node: Node):
+            if node.type in ("function_declaration", "class_declaration"):
+                name_node = node.child_by_field_name("simple_identifier")
+                if name_node:
+                    name = self._get_node_text(name_node, code)
+                    if name == target_name:
+                        def_line = name_node.start_point[0] + 1
+                        if def_line != target_line:
+                            return True
+            
+            for child in node.children:
+                if walk(child):
+                    return True
+            return False
+        
+        return walk(root)
     
     def find_references_in_repo(self, variable_name: str, origin_file: str,
                               origin_line: int, origin_column: int) -> List[Tuple[str, int, int, str]]:
