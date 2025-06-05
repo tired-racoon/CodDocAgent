@@ -1,5 +1,5 @@
-from llama_index.core.llms.function_calling import FunctionCallingLLM
-from llama_index.llms.openai import OpenAI
+from llama_index.core.llms.function_calling import FunctionCallingLLM  # type: ignore
+from llama_index.llms.openai import OpenAI  # type: ignore
 
 from repo_agent.chat_with_repo.json_handler import JsonFileProcessor
 
@@ -32,9 +32,7 @@ class TextAnalysisTool:
 
     def list_to_markdown(self, search_result):
         markdown_str = ""
-        # 遍历列表，将每个元素转换为Markdown格式的项
         for index, content in enumerate(search_result, start=1):
-            # 添加到Markdown字符串中，每个项后跟一个换行符
             markdown_str += f"{index}. {content}\n\n"
 
         return markdown_str

@@ -3,30 +3,9 @@ import inspect
 import logging
 import sys
 
-from loguru import logger
+from loguru import logger  # type: ignore
 
 logger = logger.opt(colors=True)
-"""
-RepoAgent 
-
-    ```python
-    from repo_agent.log import logger
-    
-    logger.info("It <green>works</>!") # 使用颜色
-
-    try:
-        1 / 0
-    except ZeroDivisionError:
-        logger.exception("ZeroDivisionError occurred")
-
-    logger.debug(f"Debugging info: {some_debug_variable}")
-
-    logger.warning("This is a warning message")
-
-    logger.error("An error occurred")
-    ```
-
-"""
 
 
 class InterceptHandler(logging.Handler):

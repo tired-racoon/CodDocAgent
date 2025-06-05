@@ -36,9 +36,9 @@ class TaskManager:
     def get_next_task(self):
         self.query_id += 1
         for task_id in self.task_dict.keys():
-            ready = (
-                len(self.task_dict[task_id].dependencies) == 0
-            ) and self.task_dict[task_id].status == 0
+            ready = (len(self.task_dict[task_id].dependencies) == 0) and self.task_dict[
+                task_id
+            ].status == 0
             if ready:
                 self.task_dict[task_id].status = 1
                 print(

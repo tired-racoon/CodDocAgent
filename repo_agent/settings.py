@@ -1,8 +1,8 @@
-from enum import StrEnum
+from enum import StrEnum  # type: ignore
 import yaml
 from typing import Optional
 
-from iso639 import Language, LanguageNotFoundError
+from iso639 import Language, LanguageNotFoundError  # type: ignore
 from pydantic import (
     DirectoryPath,
     Field,
@@ -12,11 +12,12 @@ from pydantic import (
     SecretStr,
     field_validator,
 )
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings  # type: ignore
 from pathlib import Path
 
 with open("config.yaml", "r", encoding="utf8") as f:
     config = yaml.load(f, Loader=yaml.FullLoader)
+
 
 class LogLevel(StrEnum):
     DEBUG = "DEBUG"
@@ -33,7 +34,7 @@ class ProjectSettings(BaseSettings):
     ignore_list: list[str] = []
     language: str = "English"
     max_thread_count: PositiveInt = 4
-    log_level: LogLevel = LogLevel.INFO
+    log_level: LogLevel = LogLevel.INFO  # type: ignore
 
     @field_validator("language")
     @classmethod
@@ -57,10 +58,12 @@ class ProjectSettings(BaseSettings):
             return LogLevel(v)
         raise ValueError(f"Invalid log level: {v}")
 
+
 def get_openai_key() -> str:
     with open("config.yaml", "r", encoding="utf8") as f:
         config = yaml.load(f, Loader=yaml.FullLoader)
-    return config['auth']['openai_key']
+    return config["auth"]["openai_key"]
+
 
 class ChatCompletionSettings(BaseSettings):
     model: str = "gpt-4o-mini"  # TODO
@@ -131,4 +134,4 @@ class SettingsManager:
 
 if __name__ == "__main__":
     setting = SettingsManager.get_setting()
-    print(setting.model_dump())
+    print(setting.model_dump())  # type: ignore

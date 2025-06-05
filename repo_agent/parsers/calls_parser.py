@@ -1,6 +1,6 @@
 import os
 from collections import defaultdict
-from tree_sitter import Node
+from tree_sitter import Node  # type: ignore
 
 from repo_agent.parsers.file_parser import TreeSitterParser
 
@@ -76,7 +76,7 @@ class CallGraphBuilder:
 
     def _extract_function_name(self, node: Node, code: bytes) -> str:
         if node is None:
-            return None
+            return None  # type: ignore
         if node.type in ("selector_expression", "member_expression"):
             left = self._extract_function_name(
                 node.child_by_field_name("object")
@@ -87,20 +87,20 @@ class CallGraphBuilder:
                 node.child_by_field_name("name") or node.child_by_field_name("field"),
                 code,
             )
-            return f"{left}.{right}" if left and right else None
+            return f"{left}.{right}" if left and right else None  # type: ignore
         elif node.type == "method_invocation":
             name_node = node.child_by_field_name("name")
-            return self._get_node_text(name_node, code) if name_node else None
+            return self._get_node_text(name_node, code) if name_node else None  # type: ignore
         elif node.type == "call_expression":
             # Специальная обработка Kotlin вызова функции
             for child in node.children:
                 if child.type == "identifier":
-                    return self._get_node_text(child, code)
-            return None
+                    return self._get_node_text(child, code)  # type: ignore
+            return None  # type: ignore
         elif node.type == "identifier":
-            return self._get_node_text(node, code)
+            return self._get_node_text(node, code)  # type: ignore
         else:
-            return self._get_node_text(node, code)
+            return self._get_node_text(node, code)  # type: ignore
 
     def _get_node_text(self, node, code: bytes):
         if not node:
@@ -117,7 +117,7 @@ class CallGraphBuilder:
             root, language, code.encode("utf-8"), file_path
         )
         for func_name, start_line, end_line, rel_path in functions:
-            self.call_graph[func_name]["location"] = {
+            self.call_graph[func_name]["location"] = {  # type: ignore
                 "file": rel_path,
                 "start_line": start_line,
                 "end_line": end_line,

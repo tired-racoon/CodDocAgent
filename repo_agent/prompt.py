@@ -1,5 +1,5 @@
-from llama_index.core import ChatPromptTemplate
-from llama_index.core.llms import ChatMessage, MessageRole
+from llama_index.core import ChatPromptTemplate  # type: ignore
+from llama_index.core.llms import ChatMessage, MessageRole  # type: ignore
 
 doc_generation_instruction = (
     "Вы являетесь помощником по документированию искусственного интеллекта, и ваша задача - создать документацию на основе заданного кода объекта. "

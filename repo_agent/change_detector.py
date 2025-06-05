@@ -44,7 +44,9 @@ class ChangeDetector:
         diffs = repo.index.diff("HEAD", R=True)
 
         for diff in diffs:
-            if diff.change_type in ["A", "M"] and diff.a_path.endswith((".py", ".java", ".go", ".kt", ".kts")):
+            if diff.change_type in ["A", "M"] and diff.a_path.endswith(
+                (".py", ".java", ".go", ".kt", ".kts")
+            ):
                 is_new_file = diff.change_type == "A"
                 staged_files[diff.a_path] = is_new_file
 
@@ -165,13 +167,13 @@ class ChangeDetector:
 
         setting = SettingsManager.get_setting()
 
-        project_hierarchy = setting.project.hierarchy_name
+        project_hierarchy = setting.project.hierarchy_name  # type: ignore
         diffs = self.repo.index.diff(None)
         untracked_files = self.repo.untracked_files
         print(f"{Fore.LIGHTCYAN_EX}untracked_files{Style.RESET_ALL}: {untracked_files}")
 
         for untracked_file in untracked_files:
-            if untracked_file.startswith(setting.project.markdown_docs_name):
+            if untracked_file.startswith(setting.project.markdown_docs_name):  # type: ignore
                 to_be_staged_files.append(untracked_file)
             continue
             # print(f"rel_untracked_file:{rel_untracked_file}")
@@ -200,8 +202,10 @@ class ChangeDetector:
 
         for unstaged_file in unstaged_files:
             if unstaged_file.startswith(
-                setting.project.markdown_docs_name
-            ) or unstaged_file.startswith(setting.project.hierarchy_name):
+                setting.project.markdown_docs_name  # type: ignore
+            ) or unstaged_file.startswith(
+                setting.project.hierarchy_name  # type: ignore
+            ):
                 # abs_unstaged_file = os.path.join(self.repo_path, unstaged_file)
                 # # rel_unstaged_file = os.path.relpath(abs_unstaged_file, self.repo_path)
                 to_be_staged_files.append(unstaged_file)

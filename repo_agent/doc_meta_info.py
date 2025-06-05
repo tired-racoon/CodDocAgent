@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional
 
 from colorama import Fore, Style
-from prettytable import PrettyTable
+from prettytable import PrettyTable  # type: ignore
 from tqdm import tqdm
 
 from repo_agent.file_handler import FileHandler
@@ -18,6 +18,7 @@ from repo_agent.multi_task_dispatch import Task, TaskManager
 from repo_agent.settings import SettingsManager
 from repo_agent.utils.meta_info_utils import is_latest_version_file_regex
 from repo_agent.references_finder import ReferenceFinder
+
 
 @unique
 class EdgeType(Enum):
@@ -100,7 +101,9 @@ def need_to_generate(doc_item: DocItem, ignore_list: List[str] = []) -> bool:
         doc_item = doc_item.father
     return False
 
+
 SUPPORTED_EXTENSIONS = (".py", ".java", ".go", ".kt", ".kts")
+
 
 @dataclass
 class DocItem:
@@ -135,7 +138,6 @@ class DocItem:
         if not isinstance(other, DocItem):
             return False
         return self.get_full_name() == other.get_full_name()
-
 
     @staticmethod
     def has_ans_relation(now_a: DocItem, now_b: DocItem):
@@ -194,7 +196,7 @@ class DocItem:
     def get_file_name(self):
         """Get file name with proper extension handling for all supported languages"""
         full_name = self.get_full_name()
-        
+
         base_name, ext = os.path.splitext(full_name)
         if ext.lower() in [".py", ".java", ".go", ".kt", ".kts"]:
             return base_name + ext
@@ -259,7 +261,7 @@ class DocItem:
         setting = SettingsManager.get_setting()
 
         if self.item_type == DocItemType._repo:
-            print_obj_name = setting.project.target_repo
+            print_obj_name = setting.project.target_repo  # type: ignore
         if diff_status and need_to_generate(self, ignore_list=ignore_list):
             print(
                 print_indent(indent)
@@ -293,7 +295,7 @@ def find_all_referencer(
         else:
             references = script.get_references(line=line_number, column=column_number)
         # print(references)
-        
+
         variable_references = [ref for ref in references if ref.name == variable_name]
         # if variable_name == "need_to_generate":
         #     import pdb; pdb.set_trace()
@@ -330,7 +332,7 @@ class MetaInfo:
 
         setting = SettingsManager.get_setting()
 
-        project_abs_path = setting.project.target_repo
+        project_abs_path = setting.project.target_repo  # type: ignore
         print(
             f"{Fore.LIGHTRED_EX}Initializing MetaInfo: {Style.RESET_ALL}from {project_abs_path}"
         )
@@ -358,7 +360,7 @@ class MetaInfo:
             checkpoint_dir_path / "meta-info.json", "r", encoding="utf-8"
         ) as reader:
             meta_data = json.load(reader)
-            metainfo.repo_path = setting.project.target_repo
+            metainfo.repo_path = setting.project.target_repo  # type: ignore
 
             metainfo.document_version = meta_data["doc_version"]
             metainfo.fake_file_reflection = meta_data["fake_file_reflection"]
@@ -415,7 +417,7 @@ class MetaInfo:
             except IOError as e:
                 logger.error(f"Failed to save meta-info JSON to {meta_info_file}: {e}")
 
-    def print_task_list(self, task_dict: Dict[Task]):
+    def print_task_list(self, task_dict: Dict[Task]):  # type: ignore
         task_table = PrettyTable(
             ["task_id", "Doc Generation Reason", "Path", "dependency"]
         )
@@ -615,15 +617,15 @@ class MetaInfo:
 
             if min_break_level > 0:
                 print(
-                    f"circle-reference(second-best still failed), level={min_break_level}: {target_item.get_full_name()}"
+                    f"circle-reference(second-best still failed), level={min_break_level}: {target_item.get_full_name()}"  # type: ignore
                 )
 
             item_denp_task_ids = []
-            for _, child in target_item.children.items():
+            for _, child in target_item.children.items():  # type: ignore
                 if child.multithread_task_id != -1:
                     assert child.multithread_task_id in task_manager.task_dict.keys()
                     item_denp_task_ids.append(child.multithread_task_id)
-            for referenced_item in target_item.reference_who:
+            for referenced_item in target_item.reference_who:  # type: ignore
                 if referenced_item.multithread_task_id in task_manager.task_dict.keys():
                     item_denp_task_ids.append(referenced_item.multithread_task_id)
             item_denp_task_ids = list(set(item_denp_task_ids))
@@ -631,9 +633,9 @@ class MetaInfo:
                 task_id = task_manager.add_task(
                     dependency_task_id=item_denp_task_ids, extra=target_item
                 )
-                target_item.multithread_task_id = task_id
+                target_item.multithread_task_id = task_id  # type: ignore
             deal_items.append(target_item)
-            doc_items.remove(target_item)
+            doc_items.remove(target_item)  # type: ignore
             bar.update(1)
 
         return task_manager
@@ -807,7 +809,6 @@ class MetaInfo:
         setting = SettingsManager.get_setting()
 
         target_meta_info = MetaInfo(
-            # repo_path=repo_path,
             target_repo_hierarchical_tree=DocItem(
                 item_type=DocItemType._repo,
                 obj_name="full_repo",
@@ -817,11 +818,11 @@ class MetaInfo:
         for file_name, file_content in tqdm(
             project_hierarchy_json.items(), desc="parsing parent relationship"
         ):
-            if not os.path.exists(os.path.join(setting.project.target_repo, file_name)):
+            if not os.path.exists(os.path.join(setting.project.target_repo, file_name)):  # type: ignore
                 logger.info(f"deleted content: {file_name}")
                 continue
             elif (
-                os.path.getsize(os.path.join(setting.project.target_repo, file_name))
+                os.path.getsize(os.path.join(setting.project.target_repo, file_name))  # type: ignore
                 == 0
             ):
                 logger.info(f"blank content: {file_name}")
@@ -834,7 +835,7 @@ class MetaInfo:
                 if recursive_file_path[pos] not in now_structure.children.keys():
                     now_structure.children[recursive_file_path[pos]] = DocItem(
                         item_type=DocItemType._dir,
-                        md_content="",
+                        md_content="",  # type: ignore
                         obj_name=recursive_file_path[pos],
                     )
                     now_structure.children[recursive_file_path[pos]].father = (
@@ -853,7 +854,7 @@ class MetaInfo:
             file_item = target_meta_info.target_repo_hierarchical_tree.find(
                 recursive_file_path
             )
-            assert file_item.item_type == DocItemType._file
+            assert file_item.item_type == DocItemType._file  # type: ignore
 
             obj_item_list: List[DocItem] = []
             for value in file_content:
@@ -907,17 +908,17 @@ class MetaInfo:
                     potential_father = file_item
                 item.father = potential_father
                 child_name = item.obj_name
-                if child_name in potential_father.children.keys():
+                if child_name in potential_father.children.keys():  # type: ignore
                     now_name_id = 0
                     while (
                         child_name + f"_{now_name_id}"
-                    ) in potential_father.children.keys():
+                    ) in potential_father.children.keys():  # type: ignore
                         now_name_id += 1
                     child_name = child_name + f"_{now_name_id}"
                     logger.warning(
-                        f"Name duplicate in {file_item.get_full_name()}: rename to {item.obj_name}->{child_name}"
+                        f"Name duplicate in {file_item.get_full_name()}: rename to {item.obj_name}->{child_name}"  # type: ignore
                     )
-                potential_father.children[child_name] = item
+                potential_father.children[child_name] = item  # type: ignore
                 # print(f"{potential_father.get_full_name()} -> {item.get_full_name()}")
 
             def change_items(now_item: DocItem):
@@ -936,7 +937,7 @@ class MetaInfo:
                 for _, child in now_item.children.items():
                     change_items(child)
 
-            change_items(file_item)
+            change_items(file_item)  # type: ignore
 
         target_meta_info.target_repo_hierarchical_tree.parse_tree_path(now_path=[])
         target_meta_info.target_repo_hierarchical_tree.check_depth()

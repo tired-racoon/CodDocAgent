@@ -10,153 +10,180 @@ from repo_agent.log import logger
 
 class ProjectHandler:
     """Multi-language project handler to replace jedi.Project"""
-    
+
     def __init__(self, repo_path: str):
         self.repo_path = Path(repo_path).resolve()
         self.reference_finder = ReferenceFinder(str(self.repo_path))
-        
+
         self.language_extensions = {
             ".py": "python",
-            ".java": "java", 
+            ".java": "java",
             ".go": "go",
             ".kt": "kotlin",
-            ".kts": "kotlin"
+            ".kts": "kotlin",
         }
-        
+
         self._file_cache = {}
         self._structure_cache = {}
-        
+
     def get_supported_files(self) -> List[str]:
         """Get all supported source files in the project"""
         supported_files = []
-        
+
         for root, dirs, files in os.walk(self.repo_path):
-            dirs[:] = [d for d in dirs if not d.startswith('.') and 
-                      d not in {'node_modules', 'target', 'build', 'dist', '__pycache__'}]
-            
+            dirs[:] = [
+                d
+                for d in dirs
+                if not d.startswith(".")
+                and d not in {"node_modules", "target", "build", "dist", "__pycache__"}
+            ]
+
             for file in files:
                 if any(file.endswith(ext) for ext in self.language_extensions.keys()):
                     file_path = os.path.join(root, file)
                     rel_path = os.path.relpath(file_path, self.repo_path)
                     supported_files.append(rel_path)
-                    
+
         return sorted(supported_files)
-    
+
     def get_file_language(self, file_path: str) -> Optional[str]:
         """Determine the programming language of a file"""
         _, ext = os.path.splitext(file_path)
         return self.language_extensions.get(ext.lower())
-    
+
     def parse_file(self, file_path: str) -> Optional[Dict]:
         """Parse a file and return its structure"""
         if file_path in self._file_cache:
             return self._file_cache[file_path]
-            
+
         language = self.get_file_language(file_path)
         if not language:
             return None
-            
+
         try:
             abs_path = os.path.join(self.repo_path, file_path)
             parser = TreeSitterParser(str(self.repo_path), file_path)
             structure = parser.generate_file_structure(file_path)
-            
+
             self._file_cache[file_path] = {
                 "language": language,
                 "structure": structure,
-                "path": file_path
+                "path": file_path,
             }
-            
+
             return self._file_cache[file_path]
-            
+
         except Exception as e:
             logger.error(f"Error parsing file {file_path}: {e}")
             return None
-    
+
     def get_all_functions(self) -> Dict[str, List[Dict]]:
         """Get all functions/methods across the project, grouped by file"""
         functions_by_file = {}
-        
+
         for file_path in self.get_supported_files():
             file_info = self.parse_file(file_path)
             if not file_info:
                 continue
-                
+
             functions = []
             for item in file_info["structure"]:
-                if item["type"] in ["FunctionDef", "AsyncFunctionDef", "Function", "method_declaration"]:
-                    functions.append({
-                        "name": item["name"],
-                        "start_line": item["code_start_line"],
-                        "end_line": item["code_end_line"],
-                        "params": item.get("params", []),
-                        "parent": item.get("parent")
-                    })
-            
+                if item["type"] in [
+                    "FunctionDef",
+                    "AsyncFunctionDef",
+                    "Function",
+                    "method_declaration",
+                ]:
+                    functions.append(
+                        {
+                            "name": item["name"],
+                            "start_line": item["code_start_line"],
+                            "end_line": item["code_end_line"],
+                            "params": item.get("params", []),
+                            "parent": item.get("parent"),
+                        }
+                    )
+
             if functions:
                 functions_by_file[file_path] = functions
-                
+
         return functions_by_file
-    
+
     def get_all_classes(self) -> Dict[str, List[Dict]]:
         """Get all classes across the project, grouped by file"""
         classes_by_file = {}
-        
+
         for file_path in self.get_supported_files():
             file_info = self.parse_file(file_path)
             if not file_info:
                 continue
-                
+
             classes = []
             for item in file_info["structure"]:
                 if item["type"] in ["ClassDef", "Class", "class_declaration"]:
-                    classes.append({
-                        "name": item["name"],
-                        "start_line": item["code_start_line"],
-                        "end_line": item["code_end_line"],
-                        "methods": self._get_class_methods(file_info["structure"], item["name"])
-                    })
-            
+                    classes.append(
+                        {
+                            "name": item["name"],
+                            "start_line": item["code_start_line"],
+                            "end_line": item["code_end_line"],
+                            "methods": self._get_class_methods(
+                                file_info["structure"], item["name"]
+                            ),
+                        }
+                    )
+
             if classes:
                 classes_by_file[file_path] = classes
-                
+
         return classes_by_file
-    
+
     def _get_class_methods(self, structure: List[Dict], class_name: str) -> List[Dict]:
         """Get all methods belonging to a specific class"""
         methods = []
         for item in structure:
-            if (item.get("parent") == class_name and 
-                item["type"] in ["FunctionDef", "AsyncFunctionDef", "Function", "method_declaration"]):
-                methods.append({
-                    "name": item["name"],
-                    "start_line": item["code_start_line"],
-                    "end_line": item["code_end_line"],
-                    "params": item.get("params", [])
-                })
+            if item.get("parent") == class_name and item["type"] in [
+                "FunctionDef",
+                "AsyncFunctionDef",
+                "Function",
+                "method_declaration",
+            ]:
+                methods.append(
+                    {
+                        "name": item["name"],
+                        "start_line": item["code_start_line"],
+                        "end_line": item["code_end_line"],
+                        "params": item.get("params", []),
+                    }
+                )
         return methods
-    
-    def find_definition(self, file_path: str, line: int, column: int) -> Optional[Tuple[str, int, int]]:
+
+    def find_definition(
+        self, file_path: str, line: int, column: int
+    ) -> Optional[Tuple[str, int, int]]:
         """Find definition of symbol at given position"""
         # This is a simplified implementation
         # For full definition finding, we'd need more sophisticated analysis
         try:
-            references = self.reference_finder.get_references(file_path, line, column, scope="project")
-            
+            references = self.reference_finder.get_references(
+                file_path, line, column, scope="project"
+            )
+
             # For now, return the first reference as a potential definition
             # In a full implementation, we'd analyze the context to determine actual definitions
             if references:
                 return references[0]
-                
+
         except Exception as e:
             logger.error(f"Error finding definition: {e}")
-            
+
         return None
-    
-    def get_references(self, file_path: str, line: int, column: int, scope: str = "project") -> List[Tuple[str, int, int]]:
+
+    def get_references(
+        self, file_path: str, line: int, column: int, scope: str = "project"
+    ) -> List[Tuple[str, int, int]]:
         """Get all references to symbol at given position"""
         return self.reference_finder.get_references(file_path, line, column, scope)
-    
+
     def get_project_stats(self) -> Dict[str, int]:
         """Get statistics about the project"""
         stats = {
@@ -167,36 +194,41 @@ class ProjectHandler:
             "kotlin_files": 0,
             "total_functions": 0,
             "total_classes": 0,
-            "total_lines": 0
+            "total_lines": 0,
         }
-        
+
         for file_path in self.get_supported_files():
             language = self.get_file_language(file_path)
             stats["total_files"] += 1
             stats[f"{language}_files"] += 1
-            
+
             # Count functions and classes
             file_info = self.parse_file(file_path)
             if file_info:
                 for item in file_info["structure"]:
-                    if item["type"] in ["FunctionDef", "AsyncFunctionDef", "Function", "method_declaration"]:
+                    if item["type"] in [
+                        "FunctionDef",
+                        "AsyncFunctionDef",
+                        "Function",
+                        "method_declaration",
+                    ]:
                         stats["total_functions"] += 1
                     elif item["type"] in ["ClassDef", "Class", "class_declaration"]:
                         stats["total_classes"] += 1
-            
+
             try:
                 abs_path = os.path.join(self.repo_path, file_path)
-                with open(abs_path, 'r', encoding='utf-8') as f:
+                with open(abs_path, "r", encoding="utf-8") as f:
                     stats["total_lines"] += len(f.readlines())
             except:
                 pass
-                
+
         return stats
 
 
 class ProjectManager:
     """Enhanced ProjectManager using ProjectHandler instead of jedi.Project"""
-    
+
     def __init__(self, repo_path, project_hierarchy):
         self.repo_path = repo_path
         self.project = ProjectHandler(self.repo_path)  # Replace jedi.Project
@@ -234,7 +266,7 @@ class ProjectManager:
                             lang_indicator = " [Go]"
                         elif name.endswith((".kt", ".kts")):
                             lang_indicator = " [Kotlin]"
-                        
+
                         structure.append(new_prefix + name + lang_indicator)
 
         structure = []
@@ -243,6 +275,7 @@ class ProjectManager:
 
     def build_path_tree(self, who_reference_me, reference_who, doc_item_path):
         """Build a tree structure showing file relationships"""
+
         def tree():
             return defaultdict(tree)
 
@@ -270,13 +303,13 @@ class ProjectManager:
             return s
 
         return tree_to_string(path_tree)
-    
+
     def get_project_summary(self):
         """Get a comprehensive summary of the project"""
         stats = self.project.get_project_stats()
         functions_by_file = self.project.get_all_functions()
         classes_by_file = self.project.get_all_classes()
-        
+
         summary = f"""
 Project Summary:
 ===============
@@ -294,13 +327,14 @@ Files with Functions: {len(functions_by_file)}
 Files with Classes: {len(classes_by_file)}
 """
         return summary
-    
-    def find_symbol_references(self, file_path: str, line: int, column: int, 
-                             in_file_only: bool = False) -> List[Tuple[str, int, int]]:
+
+    def find_symbol_references(
+        self, file_path: str, line: int, column: int, in_file_only: bool = False
+    ) -> List[Tuple[str, int, int]]:
         """Find all references to a symbol - replacement for jedi functionality"""
         scope = "file" if in_file_only else "project"
         return self.project.get_references(file_path, line, column, scope)
-    
+
     def get_supported_languages(self) -> Set[str]:
         """Get all programming languages found in the project"""
         languages = set()

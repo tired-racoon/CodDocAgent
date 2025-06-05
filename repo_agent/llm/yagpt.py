@@ -33,7 +33,7 @@ def yandex_gpt(prom: str, temperature=0.6, old_prompt="", old_response=""):
     параметры old_prompt и old_response используются для генерации дополнительных кейсов через функцию /getMoreCases
     """
     model_uri = ""
-    model = config['models']['yagpt']
+    model = config["models"]["yagpt"]
     if model == "lite4":
         model_uri = "gpt://" + config["auth"]["folder_id"] + "/yandexgpt-lite/latest"
     elif model == "pro4":
@@ -66,7 +66,7 @@ def yandex_gpt(prom: str, temperature=0.6, old_prompt="", old_response=""):
     elif model == "qwen3-32b":
         model_uri = "gpt://" + config["auth"]["folder_id"] + "qwen3-32b"
     else:
-        raise ValueError('Model name in config is incorrect')
+        raise ValueError("Model name in config is incorrect")
     if old_prompt == "" and old_response == "":
         messages = [{"role": "user", "text": prom}]
     else:

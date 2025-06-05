@@ -125,7 +125,7 @@ def handle_setting_error(e: ValidationError):
     default="INFO",
     show_default=True,
     help="Sets the logging level (e.g., DEBUG, INFO, WARNING, ERROR, CRITICAL) for the application. Default is INFO.",
-    type=click.Choice([level.value for level in LogLevel], case_sensitive=False),
+    type=click.Choice([level.value for level in LogLevel], case_sensitive=False),  # type: ignore
 )
 @click.option(
     "--print-hierarchy",
@@ -207,12 +207,12 @@ def diff():
 
     DocItem.check_has_task(
         new_meta_info.target_repo_hierarchical_tree,
-        ignore_list=setting.project.ignore_list,
+        ignore_list=setting.project.ignore_list,  # type: ignore
     )
     if new_meta_info.target_repo_hierarchical_tree.has_task:
         click.echo("The following docs will be generated/updated:")
         new_meta_info.target_repo_hierarchical_tree.print_recursive(
-            diff_status=True, ignore_list=setting.project.ignore_list
+            diff_status=True, ignore_list=setting.project.ignore_list  # type: ignore
         )
     else:
         click.echo("No docs will be generated/updated, check your source-code update")
@@ -224,10 +224,8 @@ def chat_with_repo():
     Start an interactive chat session with the repository.
     """
     try:
-        # Fetch and validate the settings using the SettingsManager
         setting = SettingsManager.get_setting()
     except ValidationError as e:
-        # Handle configuration errors if the settings are invalid
         handle_setting_error(e)
         return
 

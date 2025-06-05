@@ -1,6 +1,6 @@
 import json
 
-from llama_index.llms.openai import OpenAI
+from llama_index.llms.openai import OpenAI # type: ignore
 
 from repo_agent.chat_with_repo.json_handler import JsonFileProcessor
 from repo_agent.chat_with_repo.prompt import (
@@ -41,7 +41,7 @@ class RepoAssistant:
         queries = response.text.split("\n")
         return queries
 
-    def rerank(self, query, docs):  # 这里要防止返回值格式上出问题
+    def rerank(self, query, docs):
         response = self.weak_model.chat(
             response_format={"type": "json_object"},
             temperature=0,
@@ -65,7 +65,6 @@ class RepoAssistant:
     def list_to_markdown(self, list_items):
         markdown_content = ""
 
-        # 对于列表中的每个项目，添加一个带数字的列表项
         for index, item in enumerate(list_items, start=1):
             markdown_content += f"{index}. {item}\n"
 
@@ -88,28 +87,24 @@ class RepoAssistant:
         """
         logger.debug("Starting response generation.")
 
-        # Step 1: Format the chat prompt
         prompt = self.textanslys.format_chat_prompt(message, instruction)
         logger.debug(f"Formatted prompt: {prompt}")
 
         questions = self.textanslys.keyword(prompt)
         logger.debug(f"Generated keywords from prompt: {questions}")
 
-        # Step 2: Generate additional queries
         prompt_queries = self.generate_queries(prompt, 3)
         logger.debug(f"Generated queries: {prompt_queries}")
 
         all_results = []
         all_documents = []
 
-        # Step 3: Query the VectorStoreManager for each query
         for query in prompt_queries:
             logger.debug(f"Querying vector store with: {query}")
             query_results = self.vector_store_manager.query_store(query)
             logger.debug(f"Results for query '{query}': {query_results}")
             all_results.extend(query_results)
 
-        # Step 4: Deduplicate results by content
         unique_results = {result["text"]: result for result in all_results}.values()
         unique_documents = [result["text"] for result in unique_results]
         logger.debug(f"Unique documents: {unique_documents}")
@@ -119,11 +114,9 @@ class RepoAssistant:
         ]
         logger.debug(f"Unique code content: {unique_code}")
 
-        # Step 5: Rerank documents based on relevance
         retrieved_documents = self.rerank(message, unique_documents)
         logger.debug(f"Reranked documents: {retrieved_documents}")
 
-        # Step 6: Generate a response using RAG (Retrieve and Generate)
         response = self.rag(prompt, retrieved_documents)
         chunkrecall = self.list_to_markdown(retrieved_documents)
         logger.debug(f"RAG-generated response: {response}")
@@ -132,7 +125,6 @@ class RepoAssistant:
         bot_message = str(response)
         logger.debug(f"Initial bot_message: {bot_message}")
 
-        # Step 7: Perform NER and queryblock processing
         keyword = str(self.textanslys.nerquery(bot_message))
         keywords = str(self.textanslys.nerquery(str(prompt) + str(questions)))
         logger.debug(f"Extracted keywords: {keyword}, {keywords}")
@@ -140,24 +132,20 @@ class RepoAssistant:
         codez, mdz = self.textanslys.queryblock(keyword)
         codey, mdy = self.textanslys.queryblock(keywords)
 
-        # Ensure all returned items are lists
         codez = codez if isinstance(codez, list) else [codez]
         mdz = mdz if isinstance(mdz, list) else [mdz]
         codey = codey if isinstance(codey, list) else [codey]
         mdy = mdy if isinstance(mdy, list) else [mdy]
 
-        # Step 8: Merge and deduplicate results
         codex = list(dict.fromkeys(codez + codey))
         md = list(dict.fromkeys(mdz + mdy))
         unique_mdx = list(set([item for sublist in md for item in sublist]))
         uni_codex = list(dict.fromkeys(codex))
         uni_md = list(dict.fromkeys(unique_mdx))
 
-        # Convert to Markdown format
         codex_md = self.textanslys.list_to_markdown(uni_codex)
         retrieved_documents = list(dict.fromkeys(retrieved_documents + uni_md))
 
-        # Final rerank and response generation
         retrieved_documents = self.rerank(message, retrieved_documents[:6])
         logger.debug(f"Final retrieved documents after rerank: {retrieved_documents}")
 
@@ -169,7 +157,6 @@ class RepoAssistant:
         unique_code_md = self.textanslys.list_to_markdown(unique_code)
         logger.debug(f"Unique code in Markdown: {unique_code_md}")
 
-        # Generate final response using RAG_AR
         bot_message = self.rag_ar(prompt, uni_code, retrieved_documents, "test")
         logger.debug(f"Final bot_message after RAG_AR: {bot_message}")
 

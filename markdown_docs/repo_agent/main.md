@@ -1,44 +1,92 @@
 ## FunctionDef cli
-**cli**: cli函数的功能是为基于LLM的框架提供仓库级代码文档生成。
+**cli**: Функция cli представляет собой основу для работы с системой генерации документации кода на уровне репозитория с использованием искусственного интеллекта.
 
-**parameters**: 该函数没有参数。
+**parameters**: параметры функции cli не указаны явно.
 
-**Code Description**: cli函数是一个空函数，当前没有实现任何具体的功能。根据其文档字符串，cli的目的是为一个基于大型语言模型（LLM）的框架提供仓库级别的代码文档生成。这表明该函数可能是未来扩展的基础，旨在处理与代码文档生成相关的任务。
+**Описание кода**: функция cli является точкой входа для запуска команд в рамках проекта по генерации документации. Она использует декораторы @click.group() и @click.version_option(version_number) для настройки группового режима работы и отображения версии программы. Тело функции пока пустое (pass), что означает, что основная логика работы находится в других частях программы.
 
-在项目结构中，cli函数被调用于repo_agent/__main__.py文件中。虽然在__main__.py中没有提供具体的调用代码，但通常情况下，__main__.py文件是Python程序的入口点，cli函数可能会在程序启动时被调用，以初始化或配置文档生成的相关功能。
+**Примечание**: функция cli предназначена для использования в командной строке и может быть расширена для поддержки различных команд генерации документации. Важно учитывать, что для полноценной работы функции cli потребуются дополнительные параметры и логика в теле функции.
+## FunctionDef handle_setting_error
+**handle_setting_error**: Функция handle_setting_error обрабатывает ошибки конфигурации настроек.
 
-**Note**: 由于cli函数目前未实现任何功能，开发者在使用时应注意该函数尚未完成，可能需要进一步的开发和实现才能达到预期的文档生成效果。
-## FunctionDef handle_setting_error(e)
-**handle_setting_error**: handle_setting_error的功能是处理设置中的配置错误。
+**parameters**:
+* параметр 1: e (ValidationError) — объект ошибки, возникшей при проверке настроек.
 
-**parameters**: 该函数的参数。
-· e: ValidationError - 表示验证错误的异常对象，包含有关配置错误的详细信息。
+**Описание кода**:
+Функция handle_setting_error предназначена для обработки ошибок конфигурации, возникающих при работе с настройками программы. Она принимает в качестве параметра объект ValidationError, содержащий информацию об ошибках.
 
-**Code Description**: handle_setting_error函数用于处理在程序运行过程中遇到的配置错误。当程序尝试获取设置时，如果出现ValidationError异常，该函数将被调用。函数首先通过click库打印一条通用的错误消息，提示用户检查其设置。接着，函数遍历ValidationError对象中的错误信息，针对每个错误输出更详细的字段缺失信息，并使用不同的颜色进行区分。
+Для каждой ошибки в списке ошибок объекта ValidationError функция выполняет следующие действия:
+* извлекает имя поля, в котором возникла ошибка;
+* в зависимости от типа ошибки (missing или другой) формирует соответствующее сообщение об ошибке;
+* выводит сообщение об ошибке с помощью функции click.echo;
+* завершает работу программы с помощью исключения click.ClickException, информируя пользователя о том, что программа была завершена из-за ошибок конфигурации.
 
-如果错误类型为“missing”，函数会提示用户缺少必需的字段，并建议设置相应的环境变量；如果是其他类型的错误，则直接输出错误消息。最后，函数通过抛出click.ClickException优雅地终止程序，并显示一条终止程序的错误消息。
+Функция handle_setting_error вызывается в случае возникновения ошибки при инициализации настроек с помощью SettingsManager. Она позволяет обработать ошибки конфигурации и предоставить пользователю информативные сообщения об ошибках.
 
-在项目中，handle_setting_error函数被多个函数调用，包括run、print_hierarchy和diff。这些函数在尝试获取设置时，如果遇到ValidationError异常，都会调用handle_setting_error来处理错误并输出相关信息，从而确保用户能够及时了解配置问题并进行修正。
+**Примечание**:
+При возникновении ошибок конфигурации программа выводит сообщения об ошибках жёлтым цветом. В случае возникновения ошибки типа missing программа рекомендует установить соответствующую переменную окружения.
+## FunctionDef run(model, temperature, request_timeout, base_url, target_repo_path, hierarchy_path, markdown_docs_path, ignore_list, language, max_thread_count, log_level, print_hierarchy)
+**run**: Функция run запускает программу с заданными параметрами.
 
-**Note**: 使用该函数时，请确保传入的参数是ValidationError类型的异常对象，以便正确处理和输出错误信息。
-## FunctionDef run
-Doc is waiting to be generated...
+**parameters**:
+* параметр 1: model (str) — модель, используемая для завершения, по умолчанию «gpt-4o-mini».
+* параметр 2: temperature (float) — температура генерации для модели, по умолчанию 0.2.
+* параметр 3: request_timeout (int) — время ожидания ответа от API в секундах, по умолчанию 60.
+* параметр 4: base_url (str) — базовый URL для вызовов API, по умолчанию «https://api.openai.com/v1».
+* параметр 5: target_repo_path (str) — путь к целевому репозиторию в файловой системе.
+* параметр 6: hierarchy_path (str) — имя или путь к файлу иерархии проекта.
+* параметр 7: markdown_docs_path (str) — путь к папке, где будут храниться или генерироваться документы в формате Markdown.
+* параметр 8: ignore_list (str) — список файлов или директорий, которые нужно игнорировать при генерации документации, разделённый запятыми.
+* параметр 9: language (str) — язык документации, по умолчанию «Russian».
+* параметр 10: max_thread_count (int) — максимальное количество потоков, по умолчанию 4.
+* параметр 11: log_level (str) — уровень логирования, по умолчанию «INFO».
+* параметр 12: print_hierarchy (bool) — если установлено значение True, выводит иерархию целевого репозитория после выполнения основной задачи.
+
+**Описание кода**:
+Функция run запускает программу с заданными параметрами. Она использует SettingsManager для инициализации настроек и Runner для выполнения основной задачи. В случае возникновения ошибки при инициализации настроек функция handle_setting_error обрабатывает ошибку и завершает работу программы.
+
+Если ошибок не возникло, функция runner.run() запускает основную задачу. После завершения задачи функция выводит сообщение об успешном завершении. Если параметр print_hierarchy установлен в True, функция runner.meta_info.target_repo_hierarchical_tree.print_recursive() выводит иерархию целевого репозитория.
+
+**Примечание**:
+При генерации документации важно правильно настроить параметры target_repo_path, hierarchy_path и markdown_docs_path, чтобы обеспечить корректную работу функции. Также необходимо учитывать уровень логирования, чтобы получать необходимую информацию о работе программы.
 ## FunctionDef clean
-**clean**: The function of clean is to remove the fake files generated by the documentation process.
+**clean**: Функция clean предназначена для очистки системы от фиктивных файлов, сгенерированных в процессе создания документации.
 
-**parameters**: The parameters of this Function.
-· No parameters are required for this function.
+**Описание кода**:
 
-**Code Description**: The clean function is designed to facilitate the cleanup of temporary files, referred to as "fake files," that are created during the documentation generation process. This function achieves its purpose by invoking the delete_fake_files function, which is responsible for identifying and removing these temporary files.
+Функция clean выполняет удаление фиктивных файлов, созданных в процессе генерации документации, и информирует пользователя об успешном завершении операции через вывод сообщения в логгере.
 
-When the clean function is called, it executes the delete_fake_files function, which performs a thorough search through the project's directory structure to locate and delete any files that match specific criteria indicative of temporary files. Upon successful completion of the deletion process, the clean function logs a success message indicating that the fake files have been cleaned up.
+**Примечание**:
 
-The delete_fake_files function operates by first retrieving the project settings through the SettingsManager's get_setting method. It then utilizes a nested helper function, gci, to recursively traverse the specified directory. The gci function checks each file and directory, identifying those that are temporary based on their naming conventions. If a temporary file is found, it either deletes it if it is empty or renames it back to its original name if it contains content.
-
-The clean function is crucial in ensuring that the workspace remains free of unnecessary files after documentation tasks are completed. It is typically called at the end of the documentation process to maintain an organized project structure.
-
-**Note**: It is important to ensure that the project settings are correctly configured and that the target repository is accessible before invoking the clean function. Any issues related to file permissions or incorrect paths may lead to errors during the cleanup process.
-## FunctionDef print_hierarchy
-Doc is waiting to be generated...
+При использовании функции clean важно убедиться, что она применяется в контексте, где удаление фиктивных файлов является целесообразным и безопасным для работы системы. Функция не принимает никаких параметров, что делает её удобной для прямого вызова в соответствующих частях кода.
 ## FunctionDef diff
-Doc is waiting to be generated...
+**diff**: Функция diff проверяет наличие изменений и выводит список документов, которые будут обновлены или созданы.
+
+**parameters**: нет параметров.
+
+**Описание кода**: функция diff сначала пытается получить и проверить настройки с помощью SettingsManager. Если возникает ошибка проверки настроек (ValidationError), функция handle_setting_error обрабатывает ошибку, выводит соответствующее сообщение и завершает работу.
+
+Затем создаётся объект Runner и проверяется, не находится ли система в процессе генерации. Если да, выводится сообщение о том, что команда поддерживает только предварительную проверку, и работа прерывается.
+
+Далее создаются фиктивные файлы и инициализируется объект MetaInfo с новой метаинформацией. Новая метаинформация загружает документы из более старой метаинформации и удаляет фиктивные файлы.
+
+Затем проверяется наличие задач в иерархическом дереве целевого репозитория. Если задачи есть, выводится список документов, которые будут обновлены или созданы. Если задач нет, выводится сообщение о том, что документы не будут обновлены, и предлагается проверить обновление исходного кода.
+
+**Примечание**: функция diff предназначена для предварительной проверки изменений и вывода списка документов, которые будут обновлены или созданы. Она не поддерживает работу в процессе генерации. При возникновении ошибок настройки программа выводит соответствующие сообщения об ошибках жёлтым цветом.
+
+**Пример вывода**:
+```
+The following docs will be generated/updated:
+```
+или
+```
+No docs will be generated/updated, check your source-code update
+```
+## FunctionDef chat_with_repo
+**chat_with_repo**: Функция chat_with_repo запускает интерактивный сеанс чата с репозиторием.
+
+**parameters**: нет параметров.
+
+**Описание кода**: функция chat_with_repo начинает интерактивный сеанс чата с репозиторием. Сначала она пытается получить и проверить настройки с помощью объекта SettingsManager. Если возникает ошибка проверки настроек (ValidationError), функция handle_setting_error обрабатывает эту ошибку, выводит сообщение об ошибке и завершает работу программы. Если ошибок нет, функция вызывает основной модуль main из файла chat_with_repo.
+
+**Примечание**: при возникновении ошибок конфигурации программа выводит сообщения об ошибках жёлтым цветом. В случае возникновения ошибки типа missing программа рекомендует установить соответствующую переменную окружения.

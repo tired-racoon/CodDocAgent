@@ -7,7 +7,7 @@ import os
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-from llama_index.llms.openai_like import OpenAILike
+from llama_index.llms.openai_like import OpenAILike  # type: ignore
 from llm.yagpt import yandex_gpt
 
 # from llm.gpt import ask_gpt  - возьмем нормальный GPT из OpenAILike
@@ -21,14 +21,14 @@ class ChatEngine:
         self.project_manager = project_manager
         logger.info(f"Model name set to {self.model_name}")
         if self.model_name == "openai":
-            from llama_index.llms.openai_like import OpenAILike
+            from llama_index.llms.openai_like import OpenAILike  # type: ignore
 
             setting = SettingsManager.get_setting()
             self.llm = OpenAILike(
-                api_key=setting.chat_completion.openai_api_key,
-                api_base=setting.chat_completion.openai_base_url,
-                timeout=setting.chat_completion.request_timeout,
-                model=setting.chat_completion.model,
+                api_key=setting.chat_completion.openai_api_key,  # type: ignore
+                api_base=setting.chat_completion.openai_base_url,  # type: ignore
+                timeout=setting.chat_completion.request_timeout,  # type: ignore
+                model=setting.chat_completion.model,  # type: ignore
                 temperature=self.temperature,
                 max_retries=1,
                 is_chat_model=True,
@@ -113,7 +113,7 @@ Raw code:\n{referencer_item.content.get("code_content", "None")}\n{"=" * 10}"""
             reference_letter=reference_letter,
             referencer_content=referencer_content,
             parameters_or_attribute=parameters_or_attribute,
-            language=setting.project.language,
+            language=setting.project.language,  # type: ignore
         )
 
     def generate_doc(self, doc_item: DocItem):

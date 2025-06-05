@@ -1,18 +1,18 @@
-import chromadb
-from llama_index.core import (
+import chromadb  # type: ignore
+from llama_index.core import (  # type: ignore
     Document,
     StorageContext,
     VectorStoreIndex,
     get_response_synthesizer,
 )
-from llama_index.core.node_parser import (
+from llama_index.core.node_parser import (  # type: ignore
     SemanticSplitterNodeParser,
     SentenceSplitter,
 )
-from llama_index.core.query_engine import RetrieverQueryEngine
-from llama_index.core.retrievers import VectorIndexRetriever
-from llama_index.embeddings.openai import OpenAIEmbedding
-from llama_index.vector_stores.chroma import ChromaVectorStore
+from llama_index.core.query_engine import RetrieverQueryEngine  # type: ignore
+from llama_index.core.retrievers import VectorIndexRetriever  # type: ignore
+from llama_index.embeddings.openai import OpenAIEmbedding  # type: ignore
+from llama_index.vector_stores.chroma import ChromaVectorStore  # type: ignore
 
 from repo_agent.log import logger
 

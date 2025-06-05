@@ -1,156 +1,419 @@
-## ClassDef ProjectManager
-**ProjectManager**: The function of ProjectManager is to manage and retrieve the structure of a project repository.
+## ClassDef ProjectHandler
+**ProjectHandler**: Функция ProjectHandler имеет значение обработчика проектов, поддерживающего несколько языков для замены jedi.Project.
 
-**attributes**: The attributes of this Class.
-· repo_path: The file path to the project repository.
-· project: An instance of the Jedi Project class, initialized with the repo_path.
-· project_hierarchy: The file path to the project hierarchy JSON file, constructed from the repo_path and project_hierarchy parameter.
+**Attributes**:
+* параметр 1: `repo_path` — путь к репозиторию проекта.
+* параметр 2: `reference_finder` — экземпляр класса ReferenceFinder для поиска ссылок в файлах проекта.
+* параметр 3: `language_extensions` — словарь, связывающий расширения файлов с соответствующими языками программирования.
+* параметр 4: `_file_cache` — словарь для кэширования информации о файлах.
+* параметр 5: `_structure_cache` — словарь для кэширования структур файлов.
 
-**Code Description**: The ProjectManager class is designed to facilitate the management of a project repository by providing methods to retrieve the project's directory structure and build a reference path tree. Upon initialization, the class requires two parameters: `repo_path`, which specifies the location of the project repository, and `project_hierarchy`, which indicates the name of the hierarchy to be used. The class constructs the path to the project hierarchy JSON file by combining the repo_path with the project_hierarchy name.
+**Описание кода**:
 
-The `get_project_structure` method is responsible for returning the structure of the project by recursively traversing the directory tree starting from the repo_path. It constructs a string representation of the project structure, including all directories and Python files, while ignoring hidden files and directories. This method utilizes a nested function `walk_dir` to perform the recursive traversal.
+Класс ProjectHandler предназначен для работы с проектами, поддерживающими несколько языков программирования. В конструкторе класса задаётся путь к репозиторию проекта, инициализируется экземпляр класса ReferenceFinder и словарь language_extensions.
 
-The `build_path_tree` method creates a hierarchical tree structure based on two lists of paths: `who_reference_me` and `reference_who`, as well as a specific `doc_item_path`. It constructs a nested dictionary using `defaultdict` to represent the tree structure. The method modifies the last part of the `doc_item_path` to indicate a specific item with a star symbol. Finally, it converts the tree structure into a string format for easier visualization.
+Метод `get_supported_files` возвращает список всех поддерживаемых файлов в проекте. Метод `get_file_language` определяет язык программирования файла по его расширению. Метод `parse_file` разбирает файл и возвращает его структуру.
 
-The ProjectManager class is instantiated within the Runner class, where it is initialized with the target repository and hierarchy name obtained from the SettingsManager. This integration allows the Runner to leverage the ProjectManager's capabilities to manage and retrieve project structure information, which is essential for the overall functionality of the application.
+Методы `get_all_functions` и `get_all_classes` возвращают списки всех функций и классов в проекте, сгруппированные по файлам. Метод `_get_class_methods` возвращает список всех методов, принадлежащих указанному классу.
 
-**Note**: When using the ProjectManager class, ensure that the provided repo_path is valid and accessible. The project_hierarchy should correspond to an existing hierarchy name to avoid file path errors.
+Метод `find_definition` находит определение символа в заданном файле по позиции. Метод `get_references` возвращает все ссылки на символ в заданном файле.
 
-**Output Example**: A possible output of the `get_project_structure` method might look like this:
+Метод `get_project_stats` возвращает статистику о проекте, включая количество файлов, функций, классов и строк кода.
+
+**Примечание**:
+При использовании класса ProjectHandler необходимо учитывать, что методы `parse_file` и `get_references` могут генерировать исключения. Рекомендуется обрабатывать эти исключения для предотвращения ошибок в работе приложения.
+### FunctionDef __init__(self)
+**__init__**: Функция `__init__` инициализирует объект класса `ProjectHandler`, задавая путь к репозиторию и подготавливая необходимые компоненты для работы с ним.
+
+**parameters**:
+* параметр 1: `repo_path` — строка, содержащая путь к репозиторию.
+
+**Описание кода**:
+Функция `__init__` принимает единственный параметр `repo_path`, который представляет собой строку с путём к репозиторию. Затем этот путь преобразуется в объект `Path` с помощью функции `Path(repo_path).resolve()`, что гарантирует использование абсолютного пути к репозиторию.
+
+Далее создаётся экземпляр класса `ReferenceFinder` с использованием преобразованного пути к репозиторию. Этот класс, вероятно, предназначен для поиска ссылок или зависимостей в коде репозитория.
+
+Затем инициализируется словарь `language_extensions`, который сопоставляет расширения файлов с соответствующими языками программирования. Это позволяет легко определить язык файла по его расширению.
+
+Также инициализируются два словаря: `_file_cache` и `_structure_cache`, которые, вероятно, используются для хранения кэшированных данных о файлах и структуре репозитория.
+
+**Примечание**:
+При использовании функции `__init__` важно убедиться, что переданный путь к репозиторию является корректным и доступным. Это необходимо для корректной работы всех последующих методов объекта `ProjectHandler`.
+***
+### FunctionDef get_supported_files(self)
+**get_supported_files**: Функция `get_supported_files` возвращает список всех поддерживаемых исходных файлов в проекте.
+
+**parameters**: нет параметров.
+
+**Описание кода**: Функция `get_supported_files` использует метод `os.walk` для обхода директории проекта и поиска всех файлов. Она фильтрует файлы, исключая директории, начинающиеся с точки (`'.'`), и известные директории (`'node_modules'`, `'target'`, `'build'`, `'dist'`, ` '__pycache__'`). Затем функция проверяет, заканчивается ли имя файла расширением, указанным в словаре `language_extensions`. Если файл соответствует критериям, его полный путь и относительный путь относительно корневой директории проекта добавляются в список `supported_files`. В конце список сортируется и возвращается.
+
+Функция `get_supported_files` вызывается в следующих функциях:
+- `get_all_functions` — для получения всех функций и методов в проекте, сгруппированных по файлам.
+- `get_all_classes` — для получения всех классов в проекте, сгруппированных по файлам.
+- `get_project_stats` — для получения статистики о проекте, включая количество файлов каждого типа и общее количество функций и классов.
+- `get_supported_languages` — для получения списка всех языков программирования, найденных в проекте.
+
+**Примечание**: При использовании функции `get_supported_files` следует учитывать, что она возвращает относительные пути к файлам, а не полные пути. Это может быть важно при дальнейшей обработке данных.
+***
+### FunctionDef get_file_language(self)
+**get_file_language**: Функция get_file_language определяет язык программирования файла.
+
+**parameters**:
+* параметр 1: `file_path` — путь к файлу в виде строки.
+
+**Описание кода**: Функция `get_file_language` использует метод `splitext` из модуля `os` для разделения пути файла на имя и расширение. Затем она обращается к словарю `language_extensions`, чтобы получить соответствующее значение языка по ключу, равному нижнему регистру расширения файла. Если в словаре нет соответствующего расширения, функция возвращает `None`.
+
+Функция вызывается в контексте анализа файлов в проекте. Например, в методе `parse_file` она используется для определения языка файла перед его парсингом. В методе `get_project_stats` функция помогает собрать статистику о количестве файлов каждого языка в проекте.
+
+**Примечание**: При использовании функции `get_file_language` необходимо убедиться, что словарь `language_extensions` содержит все необходимые расширения файлов и соответствующие им языки. Это важно для корректной работы функции.
+
+**Пример вывода**: `get_file_language("path/to/file.py")` может вернуть `"python"`, если словарь `language_extensions` содержит соответствие `".py": "python"`.
+***
+### FunctionDef parse_file(self)
+**parse_file**: Функция parse_file анализирует файл и возвращает его структуру.
+
+**parameters**:
+* параметр 1: `file_path` — путь к файлу в виде строки.
+
+**Описание кода**: Функция `parse_file` сначала проверяет, есть ли уже обработанный файл с таким путём в кэше. Если есть, возвращает данные из кэша. Если нет, определяет язык файла с помощью функции `get_file_language`. Затем пытается распарсить структуру файла с помощью `TreeSitterParser`. Если парсинг успешен, сохраняет данные о файле в кэше и возвращает их. В случае ошибки возвращает `None`.
+
+Функция `parse_file` вызывается в контексте анализа файлов в проекте. Например, в методе `get_all_functions` она используется для получения информации о функциях в файле, а в методе `get_all_classes` — для получения информации о классах. В методе `get_project_stats` функция помогает собрать статистику о количестве файлов каждого языка в проекте.
+
+**Примечание**: При использовании функции `parse_file` необходимо убедиться, что путь к файлу (`file_path`) корректен и доступен. Также важно учесть, что функция может возвращать `None`, если файл не удалось распарсить или если его язык не определён.
+
+**Пример вывода**: `parse_file("path/to/file.py")` может вернуть словарь с информацией о языке файла (`"language": "python"`) и его структуре (`"structure": ...`).
+***
+### FunctionDef get_all_functions(self)
+**get_all_functions**: Функция `get_all_functions` возвращает словарь, где ключи — это пути к файлам в проекте, а значения — списки словарей с информацией о функциях и методах в этих файлах.
+
+**parameters**: нет параметров.
+
+**Описание кода**: Функция `get_all_functions` сначала получает список поддерживаемых файлов в проекте с помощью метода `get_supported_files`. Затем для каждого файла она вызывает `parse_file`, чтобы получить его структуру. Из структуры файла извлекаются все функции и методы, и информация о них сохраняется в словаре `functions_by_file`. В итоге возвращается словарь `functions_by_file`, где каждый ключ — это путь к файлу, а значение — список словарей с информацией о функциях в этом файле.
+
+Функция `get_all_functions` вызывается в контексте анализа функций в проекте. Например, она используется для получения информации о функциях в проекте, сгруппированной по файлам. Эта информация может быть использована для различных целей, таких как анализ кода, генерация документации и т. д.
+
+**Примечание**: При использовании функции `get_all_functions` следует учитывать, что она возвращает относительные пути к файлам, а не полные пути. Это может быть важно при дальнейшей обработке данных.
+
+Пример вывода: функция `get_all_functions` может вернуть словарь, где ключом будет путь к файлу, а значением — список словарей с информацией о функциях в этом файле. Например, `{"path/to/file.py": [{"name": "func1", "start_line": 10, "end_line": 20}]}`.
+***
+### FunctionDef get_all_classes(self)
+**get_all_classes**: Функция `get_all_classes` возвращает словарь, где ключи — это пути к файлам в проекте, а значения — списки словарей с информацией о классах в этих файлах.
+
+**parameters**:
+- нет параметров.
+
+**Описание кода**: Функция `get_all_classes` обходит все поддерживаемые исходные файлы в проекте, анализирует их структуру и извлекает информацию о классах. Для этого она использует функции `get_supported_files` и `parse_file`.
+
+Сначала функция `get_supported_files` возвращает список всех поддерживаемых файлов в проекте. Затем для каждого файла функция `parse_file` анализирует его и возвращает структуру. Если структура не пустая, функция `get_all_classes` извлекает из неё информацию о классах.
+
+Для каждого файла функция `get_all_classes` создаёт список словарей, где каждый словарь содержит информацию об одном классе: имя, номера строк начала и конца, а также список методов класса. Затем эта информация добавляется в словарь `classes_by_file`, где ключом является путь к файлу, а значением — список словарей с информацией о классах.
+
+В результате функция `get_all_classes` возвращает словарь `classes_by_file`.
+
+Функция `get_all_classes` вызывается в контексте анализа классов в проекте. Например, она используется для получения информации о классах при получении сводной статистики о проекте или для анализа структуры классов в проекте.
+
+**Примечание**: При использовании функции `get_all_classes` следует учитывать, что она возвращает относительные пути к файлам, а не полные пути. Это может быть важно при дальнейшей обработке данных.
+
+**Пример вывода**:
 ```
-project_root
-  src
-    main.py
-    utils.py
-  tests
-    test_main.py
+{
+    "path/to/file1.py": [
+        {
+            "name": "Class1",
+            "start_line": 10,
+            "end_line": 20,
+            "methods": [
+                {
+                    "name": "method1",
+                    "start_line": 10,
+                    "end_line": 20,
+                    "params": ["param1", "param2"]
+                }
+            ]
+        },
+        {
+            "name": "Class2",
+            "start_line": 30,
+            "end_line": 40,
+            "methods": [
+                {
+                    "name": "method2",
+                    "start_line": 30,
+                    "end_line": 40,
+                    "params": ["param3", "param4"]
+                }
+            ]
+        }
+    ],
+    "path/to/file2.py": [
+        {
+            "name": "Class3",
+            "start_line": 50,
+            "end_line": 60,
+            "methods": [
+                {
+                    "name": "method3",
+                    "start_line": 50,
+                    "end_line": 60,
+                    "params": ["param5", "param6"]
+                }
+            ]
+        }
+    ]
+}
+```
+***
+### FunctionDef _get_class_methods(self)
+**_get_class_methods_**: Функция _get_class_methods извлекает все методы, принадлежащие указанному классу.
+
+**parameters**:
+- параметр 1: `structure: List[Dict]` — структура данных, содержащая информацию о всех элементах проекта.
+- параметр 2: `class_name: str` — имя класса, для которого нужно извлечь методы.
+
+**Описание кода**: Функция _get_class_methods перебирает элементы в структуре `structure` и проверяет, соответствуют ли они критериям метода класса. Если элемент имеет `parent`, равный `class_name`, и тип (`type`), который относится к одному из указанных (FunctionDef, AsyncFunctionDef, Function, method_declaration), то этот элемент добавляется в список `methods`. В результате возвращается список `methods`, содержащий информацию о методах класса.
+
+Функция вызывается в контексте получения всех классов в проекте. Она используется для извлечения методов каждого класса, найденного в файлах проекта.
+
+**Примечание**: При использовании функции важно убедиться, что структура данных `structure` правильно сформирована и содержит всю необходимую информацию о проекте. Также следует учитывать, что функция ищет только методы, соответствующие указанным типам, и может пропустить другие виды методов.
+
+**Пример вывода**:
+```
+[
+    {
+        "name": "method_name",
+        "start_line": 10,
+        "end_line": 20,
+        "params": ["param1", "param2"]
+    },
+    {
+        "name": "another_method",
+        "start_line": 30,
+        "end_line": 40,
+        "params": ["param3", "param4"]
+    }
+]
+```
+***
+### FunctionDef find_definition(self)
+**find_definition**: Функция `find_definition` предназначена для поиска определения символа в исходном коде по заданной позиции (файлу, строке и колонке).
+
+**parameters**:
+* параметр 1: `file_path` (строка) — путь к файлу, в котором необходимо искать определение символа;
+* параметр 2: `line` (целое число) — номер строки, где находится символ;
+* параметр 3: `column` (целое число) — номер колонки, где находится символ.
+
+**Описание кода**: функция `find_definition` использует метод `get_references` объекта `self.reference_finder` для поиска всех ссылок на символ в указанном файле, на указанной строке и колонке в пределах заданной области видимости. Область видимости определяется параметром `scope` и по умолчанию равна «project». Функция возвращает первую найденную ссылку как потенциальное определение символа. Если ссылки не найдены, возвращается `None`.
+
+Функция `find_definition` может столкнуться с ошибками при поиске определения символа. В этом случае используется `logger` для записи ошибки в журнал.
+
+При использовании функции `find_definition` важно правильно указать путь к файлу, номер строки и колонки, а также выбрать подходящую область видимости. Это поможет получить точные и полезные результаты поиска определения символа.
+
+**Примечание**: функция `find_definition` предоставляет упрощённую реализацию поиска определения символа. Для полноценного поиска определения потребуется более сложный анализ кода.
+***
+### FunctionDef get_references(self)
+**get_references**: Функция `get_references` возвращает список всех ссылок на символ в заданном файле, на указанной строке и колонке в пределах заданной области видимости.
+
+**parameters**:
+* параметр 1: `file_path` (строка) — путь к файлу;
+* параметр 2: `line` (целое число) — номер строки;
+* параметр 3: `column` (целое число) — номер колонки;
+* параметр 4: `scope` (строка, по умолчанию "project") — область видимости, может быть "project" (проект) или "file" (файл).
+
+**Описание кода**:
+Функция `get_references` использует метод `get_references` объекта `self.reference_finder` для поиска всех ссылок на символ в указанном файле, на указанной строке и колонке. Область видимости определяется параметром `scope`. Функция возвращает список кортежей, каждый из которых содержит путь к файлу, номер строки и номер колонки ссылки на символ.
+
+Функция `get_references` вызывается из функции `find_definition`, которая пытается найти определение символа по заданной позиции. Если ссылки найдены, `find_definition` возвращает первую ссылку как потенциальное определение. Также функция `get_references` вызывается из функции `find_symbol_references`, которая ищет все ссылки на символ в файле или в проекте в зависимости от параметра `in_file_only`.
+
+**Примечание**:
+При использовании функции `get_references` важно правильно указать путь к файлу, номер строки и колонки, а также выбрать подходящую область видимости. Это поможет получить точные и полезные результаты поиска ссылок на символ.
+***
+### FunctionDef get_project_stats(self)
+**get_project_stats**: Функция `get_project_stats` получает статистику о проекте, включая количество файлов каждого типа и общее количество функций и классов.
+
+**parameters**: нет параметров.
+
+**Описание кода**: Функция `get_project_stats` инициализирует словарь `stats` с ключами для хранения статистики о проекте. Затем она проходит по всем поддерживаемым файлам в проекте, используя функцию `get_supported_files`. Для каждого файла определяется язык программирования с помощью функции `get_file_language`. В зависимости от языка, в словаре `stats` увеличивается соответствующий счётчик файлов.
+
+Далее, для каждого файла функция `parse_file` используется для анализа его структуры. Если файл содержит функции, их количество увеличивается в счётчике `total_functions`. Если файл содержит классы, их количество увеличивается в счётчике `total_classes`. Также подсчитывается общее количество строк кода в проекте.
+
+В конце функция возвращает словарь `stats` со статистикой о проекте.
+
+Функция `get_project_stats` вызывается в методе `get_project_summary` для получения сводной информации о проекте, включая количество файлов каждого типа, функций, классов и строк кода.
+
+**Примечание**: При использовании функции `get_project_stats` следует учитывать, что она полагается на корректную работу функций `get_supported_files` и `get_file_language` для определения поддерживаемых файлов и их языков соответственно. Это важно для корректной работы функции `parse_file` и сбора правильной статистики.
+
+**Пример вывода**: `get_project_stats()` может вернуть словарь со статистикой о проекте, например:
+```
+{
+    "total_files": 100,
+    "python_files": 50,
+    "java_files": 20,
+    "go_files": 10,
+    "kotlin_files": 20,
+    "total_functions": 150,
+    "total_classes": 50,
+    "total_lines": 10000
+}
+```
+***
+## ClassDef ProjectManager
+**ProjectManager**: Класс ProjectManager предназначен для управления проектами и работы с их структурой.
+
+**Attributes**:
+* параметр 1: `repo_path` — путь к репозиторию проекта.
+* параметр 2: `project_hierarchy` — путь к файлу иерархии проекта.
+
+**Описание кода**:
+
+Класс ProjectManager включает в себя методы для работы с проектами, такие как получение структуры проекта, построение дерева зависимостей файлов и поиск ссылок на символы.
+
+`__init__` — конструктор класса, который инициализирует атрибуты класса и создаёт экземпляр ProjectHandler для работы с проектом.
+
+`get_project_structure` — метод, который возвращает структуру проекта в виде строки. Он рекурсивно обходит дерево каталогов проекта и собирает информацию о файлах и папках.
+
+`build_path_tree` — метод, который строит дерево зависимостей файлов. Он принимает два списка путей (who_reference_me и reference_who) и путь к элементу документации (doc_item_path) и строит дерево зависимостей файлов.
+
+`get_project_summary` — метод, который возвращает сводку проекта в виде строки. Он собирает информацию о количестве файлов, функций, классов и строк кода.
+
+`find_symbol_references` — метод, который находит все ссылки на символ в проекте. Он принимает путь к файлу, номер строки и столбца и возвращает список кортежей с путями к файлам, номерами строк и столбцов, где найдены ссылки.
+
+`get_supported_languages` — метод, который возвращает все языки программирования, найденные в проекте. Он собирает информацию о языках программирования для каждого файла в проекте.
+
+**Примечание**:
+
+При использовании класса ProjectManager необходимо указать путь к репозиторию проекта и путь к файлу иерархии проекта.
+
+**Пример вывода**:
+
+```
+Project Summary:
+===============
+Total Files: 10
+- Python: 4
+- Java: 3
+- Go: 2
+- Kotlin: 1
+
+Total Functions: 20
+Total Classes: 15
+Total Lines of Code: 500
+
+Files with Functions: 8
+Files with Classes: 7
 ```
 ### FunctionDef __init__(self, repo_path, project_hierarchy)
-**__init__**: __init__的功能是初始化ProjectManager类的实例。
+**__init__**: Функция `__init__` имеет значение инициализации объекта ProjectManager, задавая путь к репозиторию проекта и иерархию проектов.
 
-**parameters**: 该函数的参数如下：
-· parameter1: repo_path - 指定项目的存储库路径。
-· parameter2: project_hierarchy - 指定项目层次结构的路径。
+**parameters**:
+* параметр 1: `repo_path` — путь к репозиторию проекта.
+* параметр 2: `project_hierarchy` — путь к файлу `project_hierarchy.json`, описывающему иерархию проектов.
 
-**Code Description**: 该__init__函数用于初始化ProjectManager类的实例。在函数内部，首先将传入的repo_path参数赋值给实例变量self.repo_path，以便在类的其他方法中使用。接着，使用jedi库创建一个新的Project对象，并将其赋值给self.project，传入的repo_path作为参数。这使得ProjectManager能够利用jedi库提供的功能来处理代码分析和自动补全等任务。最后，函数通过os.path.join方法构建项目层次结构的完整路径，将其赋值给self.project_hierarchy。该路径由repo_path、project_hierarchy参数和一个名为"project_hierarchy.json"的文件名组成，这样可以方便地访问项目的层次结构数据。
+**Описание кода**:
+Функция `__init__` инициализирует объект класса `ProjectManager`. В конструкторе задаётся путь к репозиторию проекта (`repo_path`) и создаётся экземпляр класса `ProjectHandler` с этим путём. Также формируется полный путь к файлу `project_hierarchy.json` в структуре проекта.
 
-**Note**: 使用该代码时，请确保传入的repo_path是有效的文件路径，并且project_hierarchy参数指向的目录中存在"project_hierarchy.json"文件，以避免在实例化过程中出现错误。
+Путь к файлу `project_hierarchy.json` формируется с помощью функции `os.path.join`, которая объединяет `repo_path`, `project_hierarchy` и имя файла. Это позволяет гибко задавать структуру проекта и использовать её в дальнейшем для работы с проектами.
+
+**Примечание**:
+При использовании класса `ProjectManager` важно корректно задать путь к репозиторию проекта и структуру иерархии проектов. Это обеспечит корректную работу методов класса `ProjectHandler` и других компонентов системы.
 ***
 ### FunctionDef get_project_structure(self)
-**get_project_structure**: The function of get_project_structure is to return the structure of the project by recursively walking through the directory tree.
+**get_project_structure**: Функция get_project_structure возвращает структуру проекта в виде строки, обходя рекурсивно дерево каталогов.
 
-**parameters**: The parameters of this Function.
-· There are no parameters for this function.
+**parameters**: нет параметров.
 
-**Code Description**: The get_project_structure function is designed to generate a string representation of the project's directory structure. It does this by defining an inner function called walk_dir, which takes two arguments: root (the current directory being processed) and prefix (a string used to format the output). The function initializes an empty list called structure to hold the formatted directory and file names.
+**Описание кода**: функция `get_project_structure` использует вспомогательную функцию `walk_dir` для обхода всех каталогов и файлов в `self.repo_path`. Для каждого файла или каталога формируется строка, которая добавляется в список `structure`. Если файл имеет поддерживаемое расширение (.py, .java, .go, .kt, .kts), к имени файла добавляется индикатор языка. Затем строки в списке `structure` объединяются в одну строку с символами перевода строки между ними.
 
-The walk_dir function begins by appending the base name of the current directory (root) to the structure list, prefixed by the provided prefix. It then creates a new prefix by adding two spaces to the existing prefix to indicate a deeper level in the directory hierarchy. The function proceeds to iterate over the sorted list of items in the current directory, skipping any hidden files or directories (those starting with a dot).
+`structure` — это список, в который добавляются строки с именами каталогов и файлов. `new_prefix` — префикс, который используется для форматирования вывода. `root` — текущий каталог, который обрабатывается. `prefix` — префикс для имени каталога или файла. `name` — имя файла или каталога. `path` — полный путь к файлу или каталогу. `supported_extensions` — список поддерживаемых расширений файлов. `lang_indicator` — индикатор языка для файлов с соответствующими расширениями.
 
-For each item, it constructs the full path and checks if it is a directory or a Python file (ending with ".py"). If it is a directory, the function calls itself recursively with the new prefix. If it is a Python file, it appends the file name to the structure list with the new prefix.
+**Примечание**: функция поддерживает несколько языков и может быть использована для проектов, содержащих файлы с различными расширениями.
 
-Finally, after the walk_dir function has processed all directories and files, the get_project_structure function joins the elements of the structure list into a single string, separated by newline characters, and returns this string.
-
-**Note**: It is important to ensure that the repo_path attribute of the class instance is correctly set to the root directory of the project before calling this function. The function will only include Python files in the output, ignoring other file types.
-
-**Output Example**: 
+**Пример вывода**:
 ```
-project_name
-  module1
-    file1.py
-    file2.py
-  module2
-    file3.py
-  README.md
+[путь_к_файлу]
+[путь_к_файлу] [Язык]
+[путь_к_каталогу]
+  [путь_к_файлу] [Язык]
+  [путь_к_файлу] [Язык]
 ```
-#### FunctionDef walk_dir(root, prefix)
-**walk_dir**: walk_dir的功能是遍历指定目录及其子目录，并收集所有Python文件的结构信息。
-
-**parameters**: 此函数的参数如下：
-· parameter1: root - 要遍历的根目录的路径。
-· parameter2: prefix - 用于格式化输出的前缀字符串，默认为空字符串。
-
-**Code Description**: 
-walk_dir函数用于递归遍历给定的目录（root）及其所有子目录。它首先将当前目录的名称（通过os.path.basename(root)获取）添加到结构列表中（structure），并在前缀字符串（prefix）后添加空格以便于格式化。接着，函数使用os.listdir(root)列出当前目录中的所有文件和子目录，并对这些名称进行排序。
-
-在遍历每个名称时，函数会检查名称是否以点（.）开头，以此来忽略隐藏文件和目录。如果名称不是隐藏的，函数会构造该名称的完整路径（path）。如果该路径是一个目录，函数会递归调用walk_dir，传入新的前缀（new_prefix）。如果该路径是一个文件且文件名以“.py”结尾，函数则将该文件的名称添加到结构列表中，前面加上新的前缀。
-
-该函数的设计使得它能够有效地收集指定目录下所有Python文件的结构信息，并以层级方式展示。
-
-**Note**: 使用此代码时，请确保传入的根目录路径是有效的，并且具有读取权限。此外，函数会忽略所有以点开头的文件和目录，因此如果需要处理这些文件，需调整相关逻辑。
-***
 ***
 ### FunctionDef build_path_tree(self, who_reference_me, reference_who, doc_item_path)
-**build_path_tree**: The function of build_path_tree is to construct a hierarchical representation of file paths based on two reference lists and a specific document item path.
+**build_path_tree**: Функция build_path_tree строит древовидную структуру, показывающую взаимосвязи файлов.
 
-**parameters**: The parameters of this Function.
-· who_reference_me: A list of file paths that reference the current object.
-· reference_who: A list of file paths that are referenced by the current object.
-· doc_item_path: A specific file path that needs to be highlighted in the tree structure.
+**parameters**:
+* параметр 1: `who_reference_me` — список путей к файлам или каталогам;
+* параметр 2: `reference_who` — список путей к файлам или каталогам;
+* параметр 3: `doc_item_path` — путь к файлу или каталогу, для которого нужно выделить специальный маркер в дереве.
 
-**Code Description**: The build_path_tree function creates a nested dictionary structure representing a tree of file paths. It utilizes the `defaultdict` from the `collections` module to facilitate the creation of this tree. The function begins by defining an inner function, `tree`, which initializes a new `defaultdict` that can recursively create nested dictionaries.
+**Описание кода**: Функция build_path_tree создаёт дерево, показывающее взаимосвязи между файлами и каталогами. Она принимает три параметра: списки путей `who_reference_me` и `reference_who`, а также путь `doc_item_path`. Затем функция разбивает каждый путь на части и строит дерево, где каждая часть пути становится ключом в словаре. В конце функция преобразует дерево в строку с помощью вспомогательной функции `tree_to_string`.
 
-The function then processes the two input lists, `who_reference_me` and `reference_who`. For each path in these lists, it splits the path into its components using the operating system's path separator (`os.sep`). It traverses the tree structure, creating a new node for each part of the path.
+Для построения дерева используется вложенная функция `tree`, которая возвращает словарь, где каждый ключ является частью пути. Затем функция `build_path_tree` последовательно обходит все пути в списках `who_reference_me` и `reference_who`, разбивает их на части и строит дерево. После этого функция выделяет специальный маркер (`✳️`) в пути, указанном в `doc_item_path`, и добавляет его в дерево.
 
-Next, the function processes the `doc_item_path`. It splits this path into components as well, but modifies the last component by prefixing it with a star symbol (✳️) to indicate that it is the item of interest. This modified path is then added to the tree in the same manner as the previous paths.
+**Примечание**: При использовании функции build_path_tree важно учитывать, что функция предполагает корректное разделение путей на части с помощью `os.sep`. Также необходимо помнить, что функция использует вложенную функцию `tree`, которая создаёт структуру дерева на основе вложенных словарей.
 
-Finally, the function defines another inner function, `tree_to_string`, which converts the nested dictionary structure into a formatted string representation. This function recursively traverses the tree, indenting each level of the hierarchy for clarity. The resulting string is returned as the output of the build_path_tree function.
-
-**Note**: It is important to ensure that the paths provided in `who_reference_me` and `reference_who` are valid and correctly formatted. The function assumes that the paths are well-structured and uses the operating system's path separator for splitting.
-
-**Output Example**: 
-Given the following inputs:
-- who_reference_me: ["folder1/fileA.txt", "folder1/folder2/fileB.txt"]
-- reference_who: ["folder3/fileC.txt"]
-- doc_item_path: "folder1/folder2/fileB.txt"
-
-The output of the function might look like this:
+**Пример вывода**:
 ```
-folder1
-    fileA.txt
-    folder2
-        ✳️fileB.txt
-folder3
-    fileC.txt
+[дерево в виде строки с отступами и ключами]
 ```
-#### FunctionDef tree
-**tree**: tree函数的功能是返回一个默认字典，该字典的默认值是一个新的tree函数。
-
-**parameters**: 该函数没有参数。
-
-**Code Description**: tree函数使用了Python的defaultdict类。defaultdict是collections模块中的一个字典子类，它提供了一个默认值，当访问的键不存在时，会自动调用一个指定的工厂函数来生成这个默认值。在这个函数中，tree函数本身被用作工厂函数，这意味着每当访问一个不存在的键时，defaultdict将会创建一个新的tree对象。这种递归的结构使得返回的字典可以用于构建树形结构，其中每个节点都可以有多个子节点，且子节点的数量和内容是动态生成的。
-
-**Note**: 使用该函数时，请注意避免无限递归的情况。由于tree函数返回的是一个defaultdict，其默认值也是tree函数本身，因此在访问未定义的键时会不断创建新的defaultdict，可能导致内存消耗过大。
-
-**Output Example**: 调用tree函数后，可能的返回值如下：
-```
-defaultdict(<function tree at 0x...>, {})
-```
-此返回值表示一个空的defaultdict，且其默认值是tree函数本身。若访问一个不存在的键，例如`my_tree['a']`，则会创建一个新的defaultdict，作为'a'的值。
 ***
-#### FunctionDef tree_to_string(tree, indent)
-**tree_to_string**: tree_to_string的功能是将树形结构转换为字符串格式，便于可视化展示。
+### FunctionDef get_project_summary(self)
+**get_project_summary**: Функция `get_project_summary` возвращает сводную информацию о проекте, включая количество файлов, функций, классов и строк кода.
 
-**parameters**: 此函数的参数如下：
-· parameter1: tree - 一个字典类型的树形结构，其中键表示节点，值可以是子节点的字典或其他类型。
-· parameter2: indent - 一个整数，表示当前节点的缩进级别，默认为0。
+**parameters**: нет параметров.
 
-**Code Description**: tree_to_string函数通过递归的方式将树形结构转换为字符串。首先，函数初始化一个空字符串s。然后，它对传入的tree字典进行排序，并遍历每一个键值对。在遍历过程中，函数将当前键（节点）添加到字符串s中，并根据indent参数添加相应数量的空格以实现缩进。如果当前值是一个字典，表示该节点有子节点，函数会递归调用tree_to_string，将子节点转换为字符串并添加到s中。最终，函数返回构建好的字符串s。
+**Описание кода**: Функция `get_project_summary` использует несколько вспомогательных функций для сбора данных о проекте. Сначала она вызывает `get_project_stats` для получения общей статистики о проекте, включая количество файлов каждого типа, функций и классов, а также общее количество строк кода. Затем она вызывает `get_all_functions` для получения списка всех функций в проекте, сгруппированных по файлам, и `get_all_classes` для получения списка всех классов в проекте, также сгруппированных по файлам.
 
-**Note**: 使用此函数时，请确保传入的tree参数是一个有效的字典结构，并且可以包含嵌套的字典。indent参数用于控制输出的格式，通常不需要手动设置，除非在特定情况下需要调整缩进。
+На основе полученных данных функция формирует сводную строку, которая включает:
+- общее количество файлов и их разбивку по языкам программирования;
+- общее количество функций и классов;
+- общее количество строк кода.
 
-**Output Example**: 假设输入的tree为如下结构：
-{
-    "根节点": {
-        "子节点1": {},
-        "子节点2": {
-            "孙节点1": {}
-        }
-    }
-}
-调用tree_to_string(tree)将返回：
-根节点
-    子节点1
-    子节点2
-        孙节点1
+Сводная строка возвращается в качестве результата работы функции.
+
+**Примечание**: При использовании функции `get_project_summary` следует учитывать, что она полагается на корректную работу функций `get_project_stats`, `get_all_functions` и `get_all_classes` для сбора данных. Также важно помнить, что пути к файлам, возвращаемые функциями `get_all_functions` и `get_all_classes`, являются относительными, а не полными.
+
+**Пример вывода**:
+```
+Project Summary:
+===============
+Total Files: 100
+- Python: 50
+- Java: 20
+- Go: 10
+- Kotlin: 20
+
+Total Functions: 150
+Total Classes: 50
+Total Lines of Code: 10000
+
+Files with Functions: 100
+Files with Classes: 100
+```
 ***
+### FunctionDef find_symbol_references(self)
+**find_symbol_references**: Функция `find_symbol_references` предназначена для поиска всех ссылок на указанный символ в файле или проекте.
+
+**parameters**:
+* параметр 1: `file_path` (строка) — путь к файлу;
+* параметр 2: `line` (целое число) — номер строки;
+* параметр 3: `column` (целое число) — номер колонки;
+* параметр 4: `in_file_only` (логическое значение, по умолчанию `False`) — определяет, искать ссылки только в файле (`True`) или в проекте (`False`).
+
+**Описание кода**:
+Функция `find_symbol_references` использует метод `get_references` объекта `self.project` для поиска ссылок на символ в указанном файле, на указанной строке и колонке. Область видимости определяется параметром `in_file_only`. Если `in_file_only` равно `True`, то поиск осуществляется только в файле, если `False` — в проекте. Функция возвращает список кортежей, каждый из которых содержит путь к файлу, номер строки и номер колонки ссылки на символ.
+
+**Примечание**:
+При использовании функции `find_symbol_references` важно правильно указать путь к файлу, номер строки и колонки, а также выбрать подходящую область видимости. Это поможет получить точные и полезные результаты поиска ссылок на символ.
+***
+### FunctionDef get_supported_languages(self)
+**get_supported_languages**: Функция `get_supported_languages` возвращает набор всех языков программирования, найденных в проекте.
+
+**parameters**: нет параметров.
+
+**Описание кода**: Функция `get_supported_languages` обходит все файлы в проекте и определяет язык каждого файла. Для этого она использует две вспомогательные функции: `get_supported_files` и `get_file_language`.
+
+Сначала `get_supported_languages` получает список всех поддерживаемых файлов в проекте с помощью метода `get_supported_files`. Затем для каждого файла в списке она определяет язык с помощью метода `get_file_language`. Если язык файла определён, он добавляется в набор `languages`. В конце функция возвращает набор `languages`, содержащий все уникальные языки программирования, найденные в проекте.
+
+**Примечание**: При использовании функции `get_supported_languages` следует учитывать, что она зависит от корректной работы функций `get_supported_files` и `get_file_language`. Необходимо убедиться, что словарь `language_extensions` содержит все необходимые расширения файлов и соответствующие им языки. Это важно для корректной работы функции `get_file_language` и, следовательно, для `get_supported_languages`.
+
+**Пример вывода**: функция `get_supported_languages` может вернуть набор, содержащий языки программирования, найденные в проекте, например, `{"python", "javascript"}`.
 ***

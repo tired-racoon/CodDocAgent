@@ -1,392 +1,443 @@
 ## ClassDef FileHandler
-# Class `FileHandler`
+**FileHandler**: Класс FileHandler предназначен для работы с файлами в репозитории, включая определение языка программирования файла, чтение и запись файлов, а также парсинг кода с использованием библиотеки Tree-sitter.
 
-The `FileHandler` class provides a set of methods to interact with files within a Git repository, specifically for handling changes, reading file contents, extracting code information, and writing back changes to the repository. This class allows for tasks such as retrieving modified file versions, extracting function and class structures from code, and generating project file structures using Abstract Syntax Tree (AST) parsing.
+**Attributes**:
+* **repo_path**: путь к репозиторию.
+* **file_path**: путь к файлу.
+* **project_hierarchy**: структура проекта.
+* **language_name**: определённый язык программирования файла.
+* **ts_language**: язык программирования для использования с библиотекой Tree-sitter.
+* **parser**: экземпляр класса Parser для парсинга кода.
+* **code**: код файла.
+* **root**: корневой узел дерева синтаксического анализа.
 
-## Methods Overview
+**Описание кода**:
 
-### `__init__(self, repo_path, file_path)`
-Initializes a `FileHandler` instance with the given repository and file path.
+Класс FileHandler предоставляет методы для работы с файлами в репозитории. В конструкторе класса указываются путь к репозиторию и путь к файлу. Затем определяется язык программирования файла и инициализируется соответствующий экземпляр класса Parser.
 
-#### Parameters:
-- `repo_path` (str): The absolute path to the Git repository.
-- `file_path` (str): The relative path of the file within the repository.
+Методы read_file и write_file позволяют читать содержимое файла и записывать в файл новое содержимое. Метод get_modified_file_versions возвращает текущую и предыдущую версии файла из git.
 
-### `read_file(self)`
-Reads the contents of the file specified by `file_path`.
+Методы parse_code и parse_file используются для парсинга кода с использованием библиотеки Tree-sitter. Метод parse_code принимает строку с кодом и возвращает корневой узел дерева синтаксического анализа. Метод parse_file открывает файл, читает его содержимое и вызывает метод parse_code.
 
-#### Returns:
-- `str`: The content of the current file.
+Методы extract_name и extract_parameters извлекают имя функции и параметры из узла дерева синтаксического анализа. Метод get_functions_and_classes возвращает список функций и классов из parsed code.
 
-### `get_obj_code_info(self, code_type, code_name, start_line, end_line, params, file_path=None)`
-Retrieves detailed information about a given code object (e.g., function or class) in the file.
+Метод generate_file_structure генерирует структуру для одного файла, а метод generate_overall_structure генерирует структуру для всего репозитория. Метод convert_to_markdown_file преобразует структуру файла в формат markdown.
 
-#### Parameters:
-- `code_type` (str): The type of the code object (e.g., 'FunctionDef', 'ClassDef').
-- `code_name` (str): The name of the code object.
-- `start_line` (int): The starting line number of the code object.
-- `end_line` (int): The ending line number of the code object.
-- `params` (list): A list of parameters associated with the code object.
-- `file_path` (str, optional): The path to the file containing the code object. Defaults to `None`, in which case the `file_path` provided during initialization is used.
+**Примечание**:
+При использовании класса FileHandler необходимо указать путь к репозиторию и путь к файлу. Также необходимо учитывать, что методы класса могут генерировать исключения в случае ошибок.
 
-#### Returns:
-- `dict`: A dictionary containing information about the code object, including its content, line numbers, and parameters.
-
-### `write_file(self, file_path, content)`
-Writes the provided content to a file at the specified path.
-
-#### Parameters:
-- `file_path` (str): The relative path of the file to write to.
-- `content` (str): The content to write into the file.
-
-### `get_modified_file_versions(self)`
-Retrieves the current and previous versions of a modified file.
-
-#### Returns:
-- `tuple`: A tuple containing:
-  - `current_version` (str): The content of the current version of the file.
-  - `previous_version` (str): The content of the previous version of the file (from the last Git commit).
-
-### `get_end_lineno(self, node)`
-Gets the end line number of a given AST node.
-
-#### Parameters:
-- `node`: The AST node for which to determine the end line number.
-
-#### Returns:
-- `int`: The end line number of the node, or `-1` if no line number is available.
-
-### `add_parent_references(self, node, parent=None)`
-Recursively adds a reference to the parent node for all child nodes in an Abstract Syntax Tree (AST).
-
-#### Parameters:
-- `node`: The AST node to start from.
-- `parent` (optional): The parent node, which defaults to `None`.
-
-#### Returns:
-- `None`
-
-### `get_functions_and_classes(self, code_content)`
-Extracts all functions, classes, and their parameters from a given code content, including hierarchical relationships.
-
-#### Parameters:
-- `code_content` (str): The code content to parse.
-
-#### Returns:
-- `list`: A list of tuples, each containing:
-  - The type of the node (e.g., `FunctionDef`, `ClassDef`),
-  - The name of the node,
-  - The starting line number,
-  - The ending line number,
-  - The list of parameters (if any).
-
-### `generate_file_structure(self, file_path)`
-Generates the file structure of a given file, including all functions, classes, and their parameters.
-
-#### Parameters:
-- `file_path` (str): The relative path of the file to process.
-
-#### Returns:
-- `list`: A list of dictionaries, each containing code information for a function or class in the file.
-
-### `generate_overall_structure(self, file_path_reflections, jump_files)`
-Generates the overall file structure for a repository, parsing all relevant files and skipping files that are either ignored or not staged.
-
-#### Parameters:
-- `file_path_reflections` (dict): A dictionary mapping file paths to their corresponding reflections (for handling fake files or renamed files).
-- `jump_files` (list): A list of files to skip during processing.
-
-#### Returns:
-- `dict`: A dictionary representing the overall structure of the repository, with file paths as keys and lists of code object information as values.
-
-### `convert_to_markdown_file(self, file_path=None)`
-Converts the content of a file to markdown format.
-
-#### Parameters:
-- `file_path` (str, optional): The relative path of the file to convert. If not provided, the default `file_path` will be used.
-
-#### Returns:
-- `str`: The content of the file in markdown format.
-
-#### Raises:
-- `ValueError`: If no file object is found for the specified file path.
-
----
-
-## Usage Example
-
-```python
-# Initialize the FileHandler with the repository path and file path
-file_handler = FileHandler(repo_path="/path/to/repo", file_path="src/example.py")
-
-# Read the content of the file
-file_content = file_handler.read_file()
-
-# Get code information for a function named 'example_function'
-code_info = file_handler.get_obj_code_info(
-    code_type="FunctionDef",
-    code_name="example_function",
-    start_line=10,
-    end_line=20,
-    params=["param1", "param2"]
-)
-
-# Write new content to the file
-file_handler.write_file(file_path="src/example.py", content="new content")
-
-# Get the current and previous versions of the modified file
-current_version, previous_version = file_handler.get_modified_file_versions()
-
-# Generate the file structure for a given file
-file_structure = file_handler.generate_file_structure(file_path="src/example.py")
-
-# Generate the overall file structure for the repository, skipping specified files
-repo_structure = file_handler.generate_overall_structure(file_path_reflections={}, jump_files=["skip_file.py"])
-
-# Convert the file content to markdown
-markdown_content = file_handler.convert_to_markdown_file(file_path="src/example.py")
-```
-
-## Dependencies
-- `os`: For file path manipulation and file operations.
-- `gitpython`: For interacting with the Git repository.
-- `ast`: For parsing Python code into an Abstract Syntax Tree.
-- `tqdm`: For progress bar display during repository processing.
-- `logging`: For logging error messages.
-
-The `FileHandler` class provides an effective set of utilities for managing and analyzing code files in a Git repository, making it ideal for scenarios involving file change tracking, code analysis, and file versioning.
+**Пример вывода**:
+Не применимо для данного класса.
 ### FunctionDef __init__(self, repo_path, file_path)
-**__init__**: The function of __init__ is to initialize an instance of the FileHandler class with the specified repository and file paths.
+**__init__**: Функция `__init__` инициализирует объект класса `FileHandler`, задавая путь к репозиторию и файлу, определяет язык программирования файла и создаёт соответствующие внутренние атрибуты.
 
-**parameters**: The parameters of this Function.
-· repo_path: This parameter represents the path to the repository where the project files are located. It is expected to be an absolute or relative path that points to the root of the repository.
-· file_path: This parameter is the path to a specific file within the repository. It should be a path relative to the root directory of the repository.
+**parameters**:
+* параметр 1: `repo_path` — путь к репозиторию.
+* параметр 2: `file_path` — путь к файлу.
 
-**Code Description**: The __init__ method serves as the constructor for the FileHandler class. It initializes the instance by setting two attributes: `file_path` and `repo_path`. The `file_path` attribute is assigned the value of the `file_path` parameter, which is intended to be relative to the root directory of the repository. The `repo_path` attribute is similarly assigned the value of the `repo_path` parameter, establishing a reference to the repository's location.
+**Описание кода**: Функция `__init__` принимает два параметра: `repo_path` и `file_path`. Она устанавливает атрибуты `self.repo_path` и `self.file_path` равными переданным значениям. Затем она использует объект `SettingsManager` для получения настроек проекта и создаёт атрибут `self.project_hierarchy`, который представляет собой путь к иерархии проекта в репозитории.
 
-Additionally, the method retrieves the current project settings by invoking the `get_setting` method from the SettingsManager class. This call ensures that the FileHandler instance has access to the latest configuration settings defined for the project. The retrieved settings are then used to construct the `project_hierarchy` attribute, which combines the target repository path with the hierarchy name specified in the project settings. This hierarchical structure is essential for managing files and directories within the project context.
+Далее функция определяет язык программирования файла с помощью функции `_detect_language`, если путь к файлу не `None`, или с помощью функции `_detect_most_popular_language`, если путь к файлу не задан. Если определённый язык программирования найден в словаре `LANGUAGE_MAPPING`, создаётся экземпляр класса `Parser` с соответствующим языком программирования. В противном случае атрибуты `self.ts_language` и `self.parser` устанавливаются равными `None`.
 
-The relationship with the SettingsManager is critical, as it centralizes the configuration management for the project. By utilizing the `get_setting` method, the FileHandler class ensures that it operates with the most up-to-date settings, which may include paths, logging configurations, and other project-specific parameters. This design promotes consistency and reduces the risk of errors that could arise from hardcoded values or outdated configurations.
+Также в функции устанавливаются атрибуты `self.code` и `self.root` равными `None`.
 
-**Note**: It is important to ensure that the SettingsManager is properly configured before instantiating the FileHandler class. Any misconfiguration in the settings may lead to runtime errors or unexpected behavior when accessing the project hierarchy or file paths.
+**Примечание**: При использовании функции `__init__` следует учитывать, что определение языка программирования осуществляется на основе расширения файла или наиболее популярного языка в репозитории. Если файл имеет нестандартное расширение или расширение не указано в словаре `EXTENSION_TO_LANGUAGE`, функция `_detect_language` может вернуть неверный результат. В случае отсутствия поддерживаемых языков в репозитории или при возникновении ошибки функция `_detect_most_popular_language` может вернуть Python по умолчанию.
 ***
-### FunctionDef read_file(self)
-**read_file**: read_file的功能是读取当前更改文件的内容。
+### FunctionDef _detect_language(self, file_path)
+**_detect_language_**: Функция _detect_language определяет язык программирования по расширению файла.
 
-**parameters**: 该函数没有参数。
+**parameters**:
+- параметр 1: `file_path` — путь к файлу.
 
-**Code Description**: 
-read_file函数用于读取指定路径的文件内容。它首先通过os.path.join方法将存储库路径（repo_path）和文件路径（file_path）组合成一个绝对文件路径（abs_file_path）。接着，函数以只读模式打开该文件，并使用UTF-8编码读取文件的全部内容。读取完成后，函数将文件内容作为字符串返回。
+**Описание кода**:
+Функция _detect_language принимает путь к файлу и определяет язык программирования на основе расширения файла. Для этого используется словарь EXTENSION_TO_LANGUAGE, где ключами являются расширения файлов, а значениями — соответствующие языки программирования. Функция возвращает значение из словаря, соответствующее расширению файла.
 
-在项目中，read_file函数被多个对象调用。具体来说，在repo_agent/runner.py中的add_new_item和process_file_changes方法中都有调用。add_new_item方法使用read_file函数来获取文件的源代码，以便提取文件中的函数和类信息，并生成相应的文档。process_file_changes方法则在处理文件变更时调用read_file，获取整个Python文件的代码，以便分析文件的变更情况。这表明read_file函数在文件处理和文档生成的过程中起到了关键作用。
+Эта функция вызывается в конструкторе `__init__` класса `FileHandler`, чтобы определить язык программирования для заданного файла. Если путь к файлу не задан, функция `_detect_most_popular_language` определяет наиболее популярный язык в репозитории.
 
-**Note**: 使用该函数时，请确保提供的repo_path和file_path是有效的路径，以避免文件读取错误。
+Также функция _detect_language используется в методе `generate_file_structure` для определения языка файла перед генерацией структуры файла. Если язык файла не найден в словаре `LANGUAGE_MAPPING`, используется базовый разбор файла.
 
-**Output Example**: 假设文件内容为“Hello, World!”，则该函数的返回值将是字符串“Hello, World!”。
+**Примечание**:
+При использовании функции _detect_language необходимо учитывать, что она определяет язык только на основе расширения файла. Если файл имеет нестандартное расширение или расширение не указано в словаре EXTENSION_TO_LANGUAGE, функция может вернуть неверный результат.
+
+**Пример вывода**:
+```
+detect_language("example.py")  # Вернёт "python"
+```
 ***
-### FunctionDef get_obj_code_info(self, code_type, code_name, start_line, end_line, params, file_path)
-**get_obj_code_info**: The function of get_obj_code_info is to retrieve detailed information about a specific code segment within a file.
+### FunctionDef _detect_most_popular_language(self)
+**_detect_most_popular_language_**: Функция _detect_most_popular_language определяет наиболее популярный язык программирования в репозитории.
 
-**parameters**: The parameters of this Function.
-· code_type: A string representing the type of the code being analyzed.
-· code_name: A string indicating the name of the code object.
-· start_line: An integer specifying the starting line number of the code segment.
-· end_line: An integer specifying the ending line number of the code segment.
-· params: A collection of parameters associated with the code.
-· file_path: An optional string that provides the path to the file. If not specified, it defaults to None.
+**parameters**:
+- параметр 1: нет принимаемых параметров
 
-**Code Description**: The get_obj_code_info function is designed to extract and return information about a specific segment of code from a file. It takes in several parameters that define the characteristics of the code segment, including its type, name, and the range of lines it occupies. The function initializes a dictionary, code_info, to store various attributes related to the code segment.
+**Описание кода**: Функция _detect_most_popular_language использует объект GitignoreChecker для проверки файлов и папок в репозитории и определения языка программирования каждого файла с помощью функции _detect_language. Затем она подсчитывает количество файлов для каждого языка с помощью объекта Counter и возвращает наиболее популярный язык. Если в репозитории нет поддерживаемых языков, возвращается Python по умолчанию.
 
-The function opens the specified file in read mode and reads all lines into a list. It then concatenates the lines from start_line to end_line to form the complete code content. Additionally, it checks for the presence of the code_name in the first line of the specified range to determine its column position. The function also checks if the code segment contains a return statement, which is a common indicator of a function's output.
+Функция вызывается в случае, если путь к файлу не задан в конструкторе __init__ класса FileHandler. Она также используется для определения наиболее популярного языка в репозитории при отсутствии конкретного пути к файлу.
 
-Finally, the function populates the code_info dictionary with the gathered information, including the type, name, start and end lines, parameters, the presence of a return statement, the code content, and the column position of the code name. The populated dictionary is then returned as the output of the function.
+В случае возникновения ошибки при определении наиболее популярного языка возвращается Python по умолчанию.
 
-**Note**: It is important to ensure that the specified start_line and end_line are valid and within the bounds of the file's total line count to avoid potential errors when reading the file. The file_path parameter should be correctly set to point to the desired file location.
+**Примечание**: При использовании функции _detect_most_popular_language следует учитывать, что она может возвращать Python по умолчанию в случае отсутствия поддерживаемых языков в репозитории или при возникновении ошибки.
 
-**Output Example**: A possible return value of the function could look like this:
-{
-    "type": "function",
-    "name": "calculate_sum",
-    "md_content": [],
-    "code_start_line": 10,
-    "code_end_line": 15,
-    "params": ["a", "b"],
-    "have_return": true,
-    "code_content": "def calculate_sum(a, b):\n    return a + b\n",
-    "name_column": 4
-}
+**Пример вывода**:
+```
+Detected most popular language in repository: python
+```
+***
+### FunctionDef read_file(self, file_path)
+**read_file**: Функция read_file предназначена для чтения содержимого файла.
+
+**parameters**:
+- параметр 1: file_path — путь к файлу, который нужно прочитать. Этот параметр является опциональным.
+
+**Описание кода**:
+Функция read_file считывает содержимое файла по указанному пути. Если путь к файлу не задан (file_path равен None), используется путь к файлу, сохранённый в атрибуте self.file_path объекта. Если ни один из путей не задан и не может быть использован, функция вызывает исключение ValueError. Затем формируется абсолютный путь к файлу с помощью модуля os, и файл открывается в режиме чтения с кодировкой utf-8. Содержимое файла считывается и возвращается в виде строки.
+
+**Примечание**:
+При использовании функции необходимо убедиться, что указан корректный путь к файлу или настроен атрибут self.file_path. В противном случае будет вызвано исключение ValueError.
+
+**Пример вывода**:
+Вызов функции read_file с корректным путём к файлу вернёт содержимое этого файла в виде строки.
 ***
 ### FunctionDef write_file(self, file_path, content)
-**write_file**: write_file的功能是将内容写入指定路径的文件中。
+**write_file**: Функция write_file предназначена для записи содержимого в файл.
 
-**parameters**: 该函数的参数如下：
-· parameter1: file_path (str) - 文件的相对路径。
-· parameter2: content (str) - 要写入文件的内容。
+**parameters**:
+* параметр 1: `file_path` — путь к файлу, в который будет записано содержимое.
+* параметр 2: `content` — содержимое, которое будет записано в файл.
 
-**Code Description**: write_file函数用于将指定内容写入到给定的文件路径。首先，该函数会检查file_path是否为绝对路径，如果是，则去掉路径开头的斜杠，以确保file_path是相对路径。接着，函数通过os.path.join将repo_path与file_path组合成绝对路径abs_file_path，并使用os.makedirs确保该路径的目录存在，如果不存在则创建它。然后，函数以写入模式打开文件，并将内容写入该文件，使用utf-8编码格式。
+**Описание кода**:
+Функция `write_file` принимает два параметра: `file_path` и `content`. Параметр `file_path` указывает на путь к файлу, в который будет записано содержимое. Если путь начинается с символа `/`, то этот символ удаляется. Затем формируется абсолютный путь к файлу с использованием `repo_path` и `file_path`.
 
-在项目中，write_file函数被Runner类中的add_new_item和process_file_changes两个方法调用。在add_new_item方法中，write_file用于将生成的Markdown文档写入到指定的.md文件中，确保新添加的项目的文档能够被正确保存。而在process_file_changes方法中，write_file同样用于更新Markdown文档，确保在文件变更后，文档内容能够及时反映最新的代码结构信息。这两个调用场景表明，write_file函数在文件处理和文档生成中起到了重要的作用。
+Создаётся директория, в которой будет находиться файл, если она ещё не существует. После этого файл открывается в режиме записи (`"w"`) с кодировкой `utf-8`, и содержимое записывается в файл.
 
-**Note**: 使用该函数时，请确保提供的file_path是相对路径，并且确保repo_path已正确设置，以避免文件写入错误。
+**Примечание**:
+При использовании функции `write_file` убедитесь, что путь к файлу (`file_path`) указан корректно и что директория, в которой будет находиться файл, существует или может быть создана.
 ***
-### FunctionDef get_modified_file_versions(self)
-**get_modified_file_versions**: get_modified_file_versions的功能是获取被修改文件的当前版本和之前版本。
+### FunctionDef get_modified_file_versions(self, file_path)
+**get_modified_file_versions**: Функция `get_modified_file_versions` получает текущую и предыдущую версии файла из git.
 
-**parameters**: 该函数没有参数。
+**parameters**:
+* параметр 1: `file_path` — путь к файлу, для которого нужно получить версии. Если не указан, используется значение `self.file_path`.
 
-**Code Description**: get_modified_file_versions函数用于获取指定文件的当前版本和上一个版本。首先，它通过git库获取当前工作目录中指定文件的内容，作为当前版本。然后，它通过访问git提交历史记录，获取该文件在最近一次提交中的内容，作为之前版本。如果文件在之前的提交中不存在（例如，文件是新添加的），则之前版本将被设置为None。最终，该函数返回一个包含当前版本和之前版本的元组。
+**Описание кода**: Функция `get_modified_file_versions` сначала проверяет наличие пути к файлу. Если путь не задан и не определён в атрибуте `self.file_path`, возникает ошибка `ValueError`. Затем создаётся объект `repo` с помощью `git.Repo`, который указывает на директорию репозитория, связанную с объектом.
 
-该函数在项目中的调用场景主要出现在Runner类的get_new_objects方法中。在该方法中，get_modified_file_versions被用来获取当前和之前版本的文件内容，以便比较这两个版本之间的差异。具体来说，get_new_objects方法利用当前版本和之前版本的信息，解析出新增和删除的对象，从而实现对文件内容变化的检测。
+Текущая версия файла считывается из указанного пути в репозитории. Предыдущая версия файла получается из последнего коммита, связанного с файлом. Если коммиты отсутствуют, предыдущая версия устанавливается как `None`.
 
-**Note**: 使用该函数时，请确保指定的文件路径正确，并且该文件在git仓库中存在，以避免KeyError异常。
+Функция возвращает кортеж, содержащий текущую и предыдущую версии файла.
 
-**Output Example**: 可能的返回值示例为：
+**Примечание**: Для корректной работы функции необходимо, чтобы директория репозитория была доступна и правильно настроена. Также важно учитывать, что функция работает с файлами в репозитории git и может не подойти для других систем контроля версий.
+
+**Пример вывода**:
 ```
-(
-    "def new_function():\n    pass\n", 
-    "def old_function():\n    pass\n"
-)
+(current_version, previous_version) = get_modified_file_versions(file_path)
 ```
 ***
-### FunctionDef get_end_lineno(self, node)
-**get_end_lineno**: get_end_lineno的功能是获取给定节点的结束行号。
+### FunctionDef parse_code(self)
+**parse_code**: Функция parse_code предназначена для анализа кода с использованием библиотеки Tree-sitter.
 
-**parameters**: 此函数的参数。
-· parameter1: node - 要查找结束行号的节点。
+**parameters**:
+- параметр 1: `code` — строка с кодом, который нужно проанализировать.
 
-**Code Description**: get_end_lineno函数用于获取AST（抽象语法树）节点的结束行号。首先，该函数检查传入的节点是否具有行号属性。如果节点没有行号，则返回-1，表示该节点没有有效的行号。接下来，函数初始化一个变量end_lineno为节点的行号，并遍历该节点的所有子节点。对于每个子节点，函数尝试获取其结束行号，如果子节点没有结束行号，则递归调用get_end_lineno函数来获取其结束行号。只有当子节点的结束行号有效时，end_lineno才会被更新为子节点的结束行号和当前节点的结束行号中的较大值。最终，函数返回计算得到的结束行号。
+**Описание кода**: Функция parse_code использует предварительно инициализированный парсер для анализа переданного кода. Сначала проверяется наличие парсера, если он отсутствует, возвращается `None`. Затем код преобразуется в UTF-8 и передаётся на парсинг. В результате получается дерево (tree), которое сохраняется в корне объекта.
 
-该函数在get_functions_and_classes函数中被调用，用于获取每个函数或类节点的结束行号。get_functions_and_classes函数解析整个代码内容，遍历AST树中的所有节点，并将每个函数和类的相关信息（包括开始行号和结束行号）收集到一个列表中。通过调用get_end_lineno，get_functions_and_classes能够准确地获取每个节点的结束行号，从而提供更完整的节点信息。
+Функция вызывается объектом, который работает с файлами в репозитории и использует методы для получения версий файлов. Это позволяет анализировать изменения в файлах и генерировать соответствующие структуры дерева.
 
-**Note**: 使用此代码时，请确保传入的节点是有效的AST节点，并且具有相应的行号属性，以避免返回-1的情况。
+**Примечание**: При использовании функции parse_code важно убедиться, что парсер (`self.parser`) правильно инициализирован и доступен для выполнения анализа кода.
 
-**Output Example**: 假设传入的节点的行号为10，且其子节点的结束行号为15，则该函数的返回值将为15。
+**Пример вывода**: Результат работы функции — корневой узел дерева (root), который представляет собой структуру данных, отражающую синтаксическую иерархию проанализированного кода.
 ***
-### FunctionDef add_parent_references(self, node, parent)
-**add_parent_references**: add_parent_references的功能是为抽象语法树（AST）中的每个节点添加父引用。
+### FunctionDef parse_file(self)
+**parse_file**: Функция parse_file предназначена для анализа файла с использованием библиотеки Tree-sitter.
 
-**parameters**: 该函数的参数如下：
-· parameter1: node - 当前在AST中的节点。
-· parameter2: parent - 当前节点的父节点，默认为None。
+**parameters**:
+- параметр 1: `filename` — строка с именем файла, который нужно проанализировать.
 
-**Code Description**: add_parent_references函数用于遍历给定的抽象语法树（AST）节点，并为每个节点添加一个指向其父节点的引用。函数首先通过ast.iter_child_nodes(node)获取当前节点的所有子节点，然后将当前节点（node）赋值给每个子节点的parent属性。接着，函数递归调用自身以处理每个子节点，确保所有节点都能正确地引用其父节点。
+**Описание кода**: Функция parse_file открывает указанный файл и считывает его содержимое в кодировке UTF-8. Затем она вызывает функцию parse_code для анализа считанного кода.
 
-该函数在get_functions_and_classes方法中被调用。get_functions_and_classes的主要功能是解析给定的代码内容，提取出所有函数和类及其参数，并建立它们之间的层级关系。在解析AST树时，首先调用add_parent_references函数，以确保每个节点都能访问到其父节点的信息，这对于后续的层级关系分析至关重要。通过这种方式，get_functions_and_classes能够准确地构建出函数和类的层级结构，提供更清晰的代码解析结果。
+Функция используется в контексте работы с файлами в репозитории. Она позволяет анализировать файлы и генерировать соответствующие структуры дерева.
 
-**Note**: 使用该函数时，请确保传入的节点是有效的AST节点，并注意在递归调用时可能导致的栈溢出问题，尤其是在处理深层嵌套的AST时。
+Для работы функции необходимо, чтобы объект FileHandler имел правильно инициализированный путь к репозиторию (`repo_path`).
+
+Функция parse_file вызывается функцией generate_file_structure, которая создаёт структуру файла на основе его содержимого.
+
+**Примечание**: При использовании функции parse_file важно убедиться, что объект FileHandler имеет правильно установленный путь к репозиторию.
+
+**Пример вывода**: Функция возвращает корневой узел дерева (root), который представляет собой структуру данных, отражающую синтаксическую иерархию проанализированного кода.
 ***
-### FunctionDef get_functions_and_classes(self, code_content)
-**get_functions_and_classes**: get_functions_and_classes的功能是检索所有函数、类及其参数（如果有的话）以及它们的层级关系。
+### FunctionDef get_node_text(self, node)
+**get_node_text**: Функция `get_node_text` извлекает текстовое содержимое узла.
 
-**parameters**: 此函数的参数如下：
-· parameter1: code_content - 要解析的整个文件的代码内容。
+**parameters**:
+- параметр 1: `node` — узел, для которого извлекается текст.
 
-**Code Description**: get_functions_and_classes函数用于解析给定的代码内容，提取出所有函数和类的相关信息，包括它们的名称、起始行号、结束行号、父节点名称以及参数列表。该函数首先使用ast.parse将代码内容转换为抽象语法树（AST），然后调用add_parent_references函数为每个节点添加父引用，以便后续分析时能够访问到父节点的信息。
+**Описание кода**: Функция `get_node_text` возвращает текстовое содержимое узла, используя его начальные и конечные байты для определения диапазона текста в кодировке UTF-8. Если `self.code` не определено, возвращается пустая строка.
 
-接下来，函数遍历AST树中的所有节点，检查每个节点是否为函数定义（FunctionDef）、类定义（ClassDef）或异步函数定义（AsyncFunctionDef）。对于每个符合条件的节点，函数获取其起始行号和结束行号，并提取参数列表。最终，所有收集到的信息以元组的形式存储在一个列表中并返回。
+Функция `get_node_text` вызывается в следующих ситуациях:
+- `FileHandler._extract_name_from_function_definition` извлекает имя из узла `function_definition`.
+- `FileHandler._extract_name_generic` извлекает имя из узлов, не являющихся узлами функций.
+- `FileHandler._extract_go_function_name` извлекает имя функции или метода в языке Go.
 
-该函数在多个地方被调用，例如在generate_file_structure函数中用于生成文件结构时，和在add_new_item函数中用于处理新增项目时。通过调用get_functions_and_classes，其他函数能够获取到代码中的结构信息，从而进行进一步的处理和文档生成。
+**Примечание**: Обратите внимание, что функция `get_node_text` используется для извлечения текста из узлов в различных контекстах, и её корректное использование важно для правильного извлечения информации из кода.
 
-**Note**: 使用此函数时，请确保传入的代码内容是有效的Python代码，以便能够正确解析AST并提取信息。
-
-**Output Example**: 假设传入的代码内容包含以下函数和类定义，函数的返回值可能如下所示：
-[
-    ('FunctionDef', 'AI_give_params', 86, 95, None, ['param1', 'param2']),
-    ('ClassDef', 'PipelineEngine', 97, 104, None, []),
-    ('FunctionDef', 'get_all_pys', 99, 104, 'PipelineEngine', ['param1'])
-]
+**Пример вывода**: `get_node_text` может вернуть строку, содержащую текст внутри узла, например, имя функции или метода.
 ***
-### FunctionDef generate_file_structure(self, file_path)
-**generate_file_structure**: generate_file_structure的功能是生成给定文件路径的文件结构。
+### FunctionDef extract_name(self, node)
+**extract_name**: Функция `extract_name` предназначена для извлечения имени из узла, обрабатывая при этом декорированные функции.
 
-**parameters**: 此函数的参数如下：
-· parameter1: file_path (str): 文件的相对路径。
+**parameters**:
+* параметр 1: `node` — узел, из которого извлекается имя.
 
-**Code Description**: generate_file_structure函数用于生成指定文件路径的文件结构信息。该函数首先打开指定路径的文件，并读取其内容。接着，它调用get_functions_and_classes方法来解析文件内容，提取出所有函数和类的相关信息，包括它们的名称、起始行号、结束行号及参数列表。解析得到的结构信息以元组的形式存储在一个列表中。
+**Описание кода**: Функция `extract_name` анализирует тип узла и в зависимости от этого вызывает соответствующие функции для извлечения имени. Если узел является `decorated_definition`, то функция ищет внутри него `function_definition` и вызывает `_extract_name_from_function_definition` для этого дочернего элемента. Если узел является `function_definition`, то `_extract_name_from_function_definition` вызывается непосредственно для этого узла. Для других типов узлов вызывается `_extract_name_generic`.
 
-在获取到所有结构信息后，函数会遍历这些信息，并调用get_obj_code_info方法来获取每个对象的详细代码信息，包括对象的类型、名称、起始和结束行号、参数等。最终，所有收集到的对象信息以列表的形式返回。
+Функция `extract_name` используется в ситуациях, когда необходимо извлечь имя из различных типов узлов, включая декорированные определения и определения функций. Это может быть полезно при анализе кода, который содержит декорированные функции или другие элементы. Функция `extract_name` вызывается другими функциями, которые работают с узлами, представляющими различные элементы кода.
 
-该函数被generate_overall_structure函数调用，用于生成目标仓库中所有文件的结构信息。generate_overall_structure函数会遍历所有未被忽略的文件，并对每个文件调用generate_file_structure，以获取其结构信息并存储在repo_structure字典中。
+**Примечание**: Обратите внимание, что корректное использование функции `_extract_name_from_function_definition` и `_extract_name_generic` важно для правильного извлечения имён функций из кода.
 
-**Note**: 使用此函数时，请确保传入的文件路径是有效的，并且文件内容是有效的Python代码，以便能够正确解析并提取信息。
-
-**Output Example**: 假设传入的文件路径对应的文件内容包含以下函数和类定义，函数的返回值可能如下所示：
-[
-    {
-        "function_name": {
-            "type": "function",
-            "start_line": 10,
-            "end_line": 20,
-            "parent": "class_name"
-        },
-        "class_name": {
-            "type": "class",
-            "start_line": 5,
-            "end_line": 25,
-            "parent": None
-        }
-    }
-]
+**Пример вывода**: Функция может вернуть строку, содержащую имя функции, например, `unknown` в случае, если имя не было найдено.
 ***
-### FunctionDef generate_overall_structure(self, file_path_reflections, jump_files)
-**generate_overall_structure**: The function of generate_overall_structure is to retrieve the file structure of a target repository by analyzing its contents while excluding certain files based on specified criteria.
+### FunctionDef _extract_name_from_function_definition(self, node)
+**_extract_name_from_function_definition_**: Функция `_extract_name_from_function_definition` извлекает имя, конкретно из узла `function_definition`.
 
-**parameters**: The parameters of this Function.
-· parameter1: file_path_reflections (dict) - A dictionary mapping original file paths to their reflections, used to identify files that may have been renamed or moved.
-· parameter2: jump_files (list) - A list of file names that should be ignored during the processing, as they are not to be parsed.
+**parameters**:
+- параметр 1: `node` — узел, для которого извлекается имя.
 
-**Code Description**: The generate_overall_structure method is designed to construct a comprehensive representation of the file structure within a specified repository. It begins by initializing an empty dictionary called repo_structure, which will ultimately hold the file paths and their corresponding structures.
+**Описание кода**: Функция `_extract_name_from_function_definition` перебирает дочерние элементы узла `node`. Если среди дочерних элементов находится элемент типа `identifier`, то возвращается текстовое содержимое этого элемента. В противном случае возвращается строка `unknown`.
 
-The method instantiates a GitignoreChecker object, which is responsible for checking the repository directory against patterns defined in a .gitignore file. This checker is crucial for filtering out files and folders that should be ignored based on the project's version control settings.
+Функция `_extract_name_from_function_definition` вызывается из функции `extract_name`, которая обрабатывает различные типы узлов, включая `decorated_definition` и `function_definition`. Если узел является `decorated_definition`, то функция ищет внутри него `function_definition` и вызывает `_extract_name_from_function_definition` для этого дочернего элемента. Если узел является `function_definition`, то `_extract_name_from_function_definition` вызывается непосредственно для этого узла. Для других типов узлов вызывается `_extract_name_generic`.
 
-The method then utilizes the tqdm library to create a progress bar that reflects the ongoing process of checking files and folders. It iterates over the list of non-ignored files provided by the GitignoreChecker's check_files_and_folders method. For each file, the following checks are performed:
+**Примечание**: Обратите внимание, что корректное использование функции `_extract_name_from_function_definition` важно для правильного извлечения имён функций из кода.
 
-1. If the file is present in the jump_files list, it is skipped, and a message is printed to indicate that the file will not be processed.
-2. If the file name ends with a specific substring indicating a "latest version," it is also skipped, with a corresponding message printed to the console.
+**Пример вывода**: Функция может вернуть строку, содержащую имя функции, например, `unknown` в случае, если имя не было найдено.
+***
+### FunctionDef _extract_name_generic(self, node)
+**_extract_name_generic_**: Функция _extract_name_generic предназначена для извлечения общего имени из узлов, которые не являются узлами функций.
 
-If the file passes these checks, the method attempts to generate its structure by calling the generate_file_structure method, passing the file name as an argument. If an error occurs during this process, it is logged, and the method continues to the next file.
+**parameters**:
+* параметр 1: `node` — узел, из которого извлекается имя.
 
-The progress bar is updated to reflect the current file being processed, and once all files have been evaluated, the method returns the repo_structure dictionary, which contains the paths of the files and their respective structures.
+**Описание кода**: Функция _extract_name_generic анализирует узел и извлекает из него имя. Если узел представляет собой объявление метода или функции на языке Go, функция _extract_name_generic вызывает _extract_go_function_name для извлечения имени. В противном случае функция ищет в узле идентификатор или имя и возвращает его текстовое содержимое. Если имя не найдено, возвращается значение "unknown".
 
-This method is integral to the FileHandler class, as it consolidates the information about the repository's file structure while adhering to the rules defined in the .gitignore file and respecting the files specified in the jump_files list.
+Функция _extract_name_generic вызывается в ситуациях, когда необходимо извлечь имя из узлов, не являющихся узлами функций. Это может быть полезно при анализе кода, который содержит объявления классов, методов и других элементов, не являющихся функциями. Функция _extract_name_generic используется в контексте анализа кода и может быть вызвана другими функциями, которые работают с узлами, представляющими различные элементы кода.
 
-**Note**: It is essential to ensure that the .gitignore file is correctly formatted and accessible to avoid unintended exclusions of files. Additionally, the jump_files list should be accurately populated to ensure that the intended files are ignored during processing.
+Функция _extract_name_generic вызывается из функции extract_name, которая предназначена для извлечения имени из узла, обрабатывая при этом декорированные функции. Если узел представляет собой декорированное определение в Python, extract_name вызывает _extract_name_from_function_definition для извлечения имени из определения функции. В противном случае extract_name вызывает _extract_name_generic для извлечения имени из узла.
 
-**Output Example**: An example output of the generate_overall_structure method might look like this:
+**Примечание**: Обратите внимание, что функция _extract_name_generic корректно обрабатывает различные типы узлов и извлекает из них соответствующие имена. Это важно для правильного анализа кода и извлечения из него необходимой информации.
+
+**Пример вывода**: Функция может вернуть строку, содержащую имя, например, имя переменной или класса.
+***
+### FunctionDef _extract_go_function_name(self, node)
+**_extract_go_function_name**: Функция _extract_go_function_name предназначена для извлечения имени функции или метода в языке Go.
+
+**parameters**:
+- параметр 1: `node` — узел, для которого извлекается имя функции или метода.
+
+**Описание кода**: Функция _extract_go_function_name анализирует узел и ищет в нём имя функции или метода в соответствии с синтаксисом языка Go. Она проверяет, является ли найденный идентификатор именем функции (не являющимся частью получателя) или именем метода (с указанием получателя). Если имя найдено, оно возвращается. В противном случае возвращается значение "unknown".
+
+Функция вызывается в ситуациях, когда необходимо извлечь имя функции или метода в языке Go. Она используется в контексте анализа кода и может быть вызвана другими функциями, которые работают с узлами, представляющими функции или методы.
+
+Функция _extract_go_function_name вызывается из функции _extract_name_generic, которая предназначена для извлечения имени из узлов, не являющихся узлами функций. Если узел представляет собой объявление метода или функции в языке Go, _extract_name_generic вызывает _extract_go_function_name для извлечения имени.
+
+**Примечание**: Обратите внимание, что функция _extract_go_function_name корректно обрабатывает случаи, когда имя функции или метода следует после списка параметров или является единственным идентификатором в узле. Это важно для правильного извлечения информации из кода на языке Go.
+
+**Пример вывода**: Функция может вернуть строку, содержащую имя функции или метода, например, "func Name(params)".
+***
+### FunctionDef extract_parameters(self, node)
+**extract_parameters**: Функция `extract_parameters` имеет значение извлечения параметров из узла функции или метода в зависимости от языка программирования.
+
+**parameters**:
+* параметр 1: `node` — узел, для которого извлекаются параметры.
+
+**Описание кода**: Функция `extract_parameters` определяет язык программирования и вызывает соответствующую функцию для извлечения параметров. В зависимости от языка программирования (`python`, `java`, `go`, `kotlin`) вызываются разные функции: `_extract_python_parameters`, `_extract_java_parameters`, `_extract_go_parameters`, `_extract_kotlin_parameters`. Если язык программирования не определён, возвращается пустой список.
+
+Функция `extract_parameters` используется в контексте обработки узлов, представляющих функции или методы в различных языках программирования. Она вызывается из функции `get_functions_and_classes`, которая извлекает функции и классы из проанализированного кода.
+
+**Примечание**: Обратите внимание, что корректная работа функции `extract_parameters` зависит от правильной структуры узла и корректного использования функции `get_node_text` для извлечения текстового содержимого узлов.
+
+**Пример вывода**: Функция может вернуть список параметров, например, `["param1", "param2"]`.
+***
+### FunctionDef _extract_python_parameters(self, node)
+**_extract_python_parameters**: Функция _extract_python_parameters извлекает параметры для функций Python.
+
+**parameters**:
+* параметр 1: `node` — узел, для которого извлекаются параметры.
+
+**Описание кода**: Функция _extract_python_parameters анализирует узел и извлекает параметры функции Python. Если узел является декорированным определением функции, функция рекурсивно вызывает себя для дочернего узла, представляющего определение функции. В случае обычного определения функции, она перебирает дочерние узлы в поисках параметров. Для каждого параметра, представленного идентификатором, добавляется его текстовое содержимое в список `params`. Если параметр имеет значение по умолчанию, функция извлекает имя параметра из дочернего узла с помощью функции `get_node_text`.
+
+Функция вызывается в методе `extract_parameters`, который определяет язык программирования и вызывает соответствующую функцию для извлечения параметров.
+
+**Примечание**: Обратите внимание, что корректная работа функции _extract_python_parameters зависит от правильной структуры узла и корректного использования функции `get_node_text` для извлечения текстового содержимого узлов.
+
+**Пример вывода**: Функция может вернуть список параметров, например, `["param1", "param2"]`.
+***
+### FunctionDef _extract_java_parameters(self, node)
+**_extract_java_parameters**: Функция _extract_java_parameters извлекает параметры для методов Java.
+
+**parameters**:
+- параметр 1: `node` — узел, для которого извлекаются параметры.
+
+**Описание кода**: Функция _extract_java_parameters проходит по дочерним элементам узла `node` и ищет элементы типа `formal_parameters`. Затем она перебирает дочерние элементы этого типа и извлекает имена параметров, которые хранятся в виде идентификаторов. Если в `formal_parameter` есть хотя бы один идентификатор, его текстовое содержимое добавляется в список `params`. В итоге возвращается список извлечённых параметров или пустой список, если параметры не найдены.
+
+Функция _extract_java_parameters вызывается из функции `extract_parameters`, которая определяет язык программирования и вызывает соответствующую функцию для извлечения параметров. Эта функция вызывается в контексте обработки узлов, представляющих функции или методы в различных языках программирования, таких как Java.
+
+**Примечание**: Обратите внимание, что корректное использование функции _extract_java_parameters важно для правильного извлечения параметров методов Java из исходного кода.
+
+**Пример вывода**: Функция может вернуть список, содержащий имена параметров метода Java, например, ["parameter1", "parameter2"].
+***
+### FunctionDef _extract_go_parameters(self, node)
+**_extract_go_parameters**: Функция _extract_go_parameters извлекает параметры для функций на языке Go.
+
+**parameters**:
+- параметр 1: `node` — узел, из которого извлекаются параметры.
+
+**Описание кода**: Функция _extract_go_parameters обходит дерево синтаксического разбора и ищет в нём список параметров функции. Для этого она перебирает все дочерние элементы узла `node` и ищет среди них элемент типа `parameter_list`. Затем функция обходит все дочерние элементы этого списка и ищет среди них объявления параметров (`parameter_declaration`). Для каждого объявления параметров функция извлекает имена параметров, обходя его дочерние элементы и ища среди них идентификаторы (`identifier`). Извлечённые имена параметров добавляются в список `params`, который затем возвращается в качестве результата функции. Если список параметров не найден, функция возвращает пустой список.
+
+Функция _extract_go_parameters вызывается из функции `extract_parameters`, которая определяет, какую функцию извлечения параметров вызывать в зависимости от языка программирования.
+
+**Примечание**: Обратите внимание, что корректная работа функции _extract_go_parameters зависит от корректного построения дерева синтаксического разбора исходного кода.
+
+**Пример вывода**: Функция может вернуть список строк, содержащих имена параметров функции на языке Go.
+***
+### FunctionDef _extract_kotlin_parameters(self, node)
+**_extract_kotlin_parameters**: Функция `_extract_kotlin_parameters` извлекает параметры для функций на языке Kotlin.
+
+**parameters**:
+- параметр 1: `node` — узел, для которого извлекаются параметры.
+
+**Описание кода**: Функция `_extract_kotlin_parameters` проходит по дочерним элементам узла `node` и ищет элементы типа `function_value_parameters`. Затем она собирает имена параметров в список `params`, извлекая их из дочерних элементов типа `function_value_parameter` и `simple_identifier`. Если в узле `node` не найдены подходящие параметры, функция возвращает пустой список.
+
+Функция `_extract_kotlin_parameters` вызывается из функции `extract_parameters`, которая выбирает соответствующую функцию для извлечения параметров в зависимости от языка программирования. Если язык программирования — Kotlin, вызывается `_extract_kotlin_parameters`.
+
+**Примечание**: Обратите внимание, что функция `_extract_kotlin_parameters` корректно извлекает параметры только в случае, если структура узла соответствует ожидаемой. Если структура узла отличается, функция может не вернуть корректные результаты.
+
+**Пример вывода**: Функция `_extract_kotlin_parameters` может вернуть список строк, содержащих имена параметров функции на Kotlin.
+***
+### FunctionDef get_functions_and_classes(self)
+**get_functions_and_classes**: Функция `get_functions_and_classes` извлекает из проанализированного кода функции и классы.
+
+**parameters**:
+* параметр 1: нет
+
+**Описание кода**: Функция `get_functions_and_classes` анализирует дерево синтаксического разбора кода и извлекает из него информацию о функциях и классах. Для этого она использует вспомогательную функцию `walk`, которая рекурсивно обходит все узлы дерева. В зависимости от типа узла (`function` или `class`) функция `get_functions_and_classes` добавляет в результирующий список информацию о найденной функции или классе. Функция `get_functions_and_classes` вызывается из функции `generate_file_structure`, которая генерирует структуру файла на основе его содержимого.
+
+Для извлечения имени функции или класса используется функция `extract_name`, которая анализирует тип узла и в зависимости от этого вызывает соответствующие функции для извлечения имени. Для извлечения параметров функции используется функция `extract_parameters`, которая определяет язык программирования и вызывает соответствующую функцию для извлечения параметров.
+
+Функция `get_functions_and_classes` возвращает список кортежей, каждый из которых содержит информацию о функции или классе: тип (`FunctionDef` для Python или `Function` для других языков, `ClassDef` для Python или `Class` для других языков), имя, номера строк начала и конца, параметры, родительский элемент и текстовое содержимое.
+
+**Примечание**: Обратите внимание, что корректное использование функций `extract_name` и `extract_parameters` важно для правильного извлечения информации о функциях и классах из кода.
+
+**Пример вывода**: `[("FunctionDef", "func_name", 10, 20, ["param1", "param2"], None, "def func_name(param1, param2): ..."), ("ClassDef", "ClassName", 25, 35, [], None, "class ClassName: ...")]`
+***
+### FunctionDef get_obj_code_info(self, code_type, code_name, start_line, end_line, params, file_path)
+**get_obj_code_info**: Функция get_obj_code_info предназначена для получения подробной информации о коде объекта.
+
+**parameters**:
+- параметр 1: `code_type` — тип кода объекта;
+- параметр 2: `code_name` — имя кода объекта;
+- параметр 3: `start_line` — номер начальной строки кода;
+- параметр 4: `end_line` — номер конечной строки кода;
+- параметр 5: `params` — параметры кода;
+- параметр 6: `file_path` (опционально) — путь к файлу, в котором находится код (по умолчанию используется путь, установленный в экземпляре объекта).
+
+**Описание кода**:
+Функция `get_obj_code_info` получает информацию о коде объекта, включая его тип, имя, параметры, начальную и конечную строки в файле, а также содержание кода. Она открывает указанный файл и считывает строки, соответствующие заданному диапазону. Затем функция ищет имя кода в этих строках и определяет, есть ли в коде оператор `return`.
+
+Функция использует следующие шаги:
+1. Инициализирует словарь `code_info` для хранения информации о коде.
+2. Заполняет словарь значениями параметров функции.
+3. Определяет путь к файлу для чтения.
+4. Открывает файл и считывает его содержимое.
+5. Извлекает содержание кода, соответствующее заданному диапазону строк.
+6. Определяет позицию имени кода в первой строке диапазона.
+7. Проверяет наличие оператора `return` в содержимом кода.
+8. Заполняет словарь `code_info` найденной информацией.
+9. Возвращает словарь `code_info`.
+
+Функция может быть вызвана из других частей программы, например, для получения информации о функциях и классах в файле.
+
+**Примечание**:
+При вызове функции необходимо указать путь к файлу, если он не был установлен ранее в экземпляре объекта. В противном случае будет вызвано исключение `ValueError`.
+
+**Пример вывода**:
 ```
 {
-    "src/module1.py": { ... },  # Structure of module1.py
-    "src/module2.py": { ... },  # Structure of module2.py
-    "tests/test_module1.py": { ... }  # Structure of test_module1.py
+    "type": "функция",
+    "name": "example_function",
+    "md_content": [],
+    "code_start_line": 10,
+    "code_end_line": 20,
+    "params": ["параметр1", "параметр2"],
+    "have_return": True,
+    "code_content": "content of the function",
+    "name_column": 10
 }
 ```
-This output indicates that the method has successfully generated the structures for the specified files, with each file path mapped to its corresponding structure representation.
+***
+### FunctionDef generate_file_structure(self, file_path)
+**generate_file_structure**: Функция generate_file_structure создаёт структуру для отдельного файла.
+
+**parameters**:
+* параметр 1: `file_path` — путь к файлу.
+
+**Описание кода**: Функция generate_file_structure анализирует файл и создаёт его структуру. Сначала она определяет язык программирования файла с помощью функции _detect_language. Если язык не определён или не поддерживается, используется базовый разбор файла. Затем функция parse_file анализирует файл с использованием библиотеки Tree-sitter. После этого функция get_functions_and_classes извлекает из проанализированного кода функции и классы. Затем создаётся список file_objects, в который добавляются объекты кода (функции и классы) в виде кортежей с информацией о них.
+
+Функция generate_file_structure вызывается из функции generate_overall_structure, которая создаёт структуру для всего репозитория.
+
+Функция generate_file_structure временно изменяет язык программирования, если он отличается от текущего, чтобы использовать соответствующий парсер. После создания структуры файла язык программирования и парсер восстанавливаются до исходных значений.
+
+**Примечание**: При использовании функции generate_file_structure необходимо убедиться, что путь к файлу указан корректно. Если путь не задан, функция _detect_language попытается определить наиболее популярный язык в репозитории, что может привести к некорректным результатам.
+
+**Пример вывода**: Список file_objects, содержащий кортежи с информацией о функциях и классах в файле.
+***
+### FunctionDef _fallback_file_structure(self, file_path)
+**_fallback_file_structure**: Функция _fallback_file_structure используется для обработки файлов с неподдерживаемыми типами и возвращает пустую структуру.
+
+**parameters**:
+- параметр 1: `file_path` — путь к файлу, для которого нужно сгенерировать структуру.
+
+**Описание кода**:
+Функция _fallback_file_structure вызывается, когда не удаётся определить язык файла или когда файл имеет неподдерживаемый тип. В таких случаях функция возвращает пустой список, что означает отсутствие структуры для файла. Это обеспечивает согласованное поведение при работе с файлами, для которых не предусмотрен специальный обработчик.
+
+Функция _generate_file_structure определяет, что файл не поддерживается, и вызывает _fallback_file_structure для обработки такого файла.
+
+**Примечание**:
+При работе с файлами, для которых не предусмотрен специальный обработчик, важно корректно обрабатывать такие ситуации, чтобы избежать ошибок и неожиданного поведения программы. Функция _fallback_file_structure обеспечивает единый подход к обработке файлов с неподдерживаемыми типами.
+
+**Пример вывода**:
+```
+[]
+```
+***
+### FunctionDef generate_overall_structure(self, file_path_reflections, jump_files)
+**generate_overall_structure**: Функция generate_overall_structure создаёт структуру для всего репозитория.
+
+**parameters**:
+* параметр 1: `file_path_reflections` — список путей к файлам и отражениям, которые необходимо учесть при создании структуры репозитория;
+* параметр 2: `jump_files` — список файлов, которые нужно игнорировать при создании структуры.
+
+**Описание кода**: Функция generate_overall_structure проходит по всем файлам и папкам в репозитории, исключая те, которые указаны в .gitignore, а также те, которые находятся в списке jump_files. Для каждого файла, который не был проигнорирован, функция вызывает generate_file_structure для создания структуры файла. Затем эта структура добавляется в словарь repo_structure. Если при создании структуры файла возникает ошибка, она регистрируется в логере, и процесс продолжается со следующим файлом.
+
+Функция использует объект GitignoreChecker для проверки файлов и папок в соответствии с правилами, указанными в .gitignore. Для отображения прогресса используется библиотека tqdm.
+
+**Примечание**: При использовании функции generate_overall_structure необходимо убедиться, что параметры file_path_reflections и jump_files указаны корректно. Также важно учитывать, что функция может игнорировать файлы и папки, указанные в .gitignore, и файлы из списка jump_files.
+
+**Пример вывода**: Словарь repo_structure, содержащий структуры для всех файлов и папок в репозитории, за исключением игнорируемых файлов и папок.
 ***
 ### FunctionDef convert_to_markdown_file(self, file_path)
-**convert_to_markdown_file**: The function of convert_to_markdown_file is to convert the content of a specified file into markdown format.
+**convert_to_markdown_file**: Функция convert_to_markdown_file преобразует структуру файла в формат Markdown.
 
-**parameters**: The parameters of this Function.
-· file_path: (str, optional) The relative path of the file to be converted. If not provided, the default file path will be used.
+**parameters**:
+- параметр `file_path`: путь к файлу.
 
-**Code Description**: The convert_to_markdown_file function is designed to read a file's metadata from a JSON structure and convert it into a markdown representation. The function begins by opening a JSON file that contains the project hierarchy, which is expected to be structured in a way that associates file paths with their corresponding metadata. If the file_path parameter is not provided, the function defaults to using an internal file path attribute.
+**Описание кода**:
+Функция `convert_to_markdown_file` принимает на вход путь к файлу (`file_path`) и преобразует структуру файла, представленную в формате JSON, в формат Markdown. Если путь к файлу не указан, используется путь по умолчанию (`self.file_path`).
 
-The function retrieves the relevant file object from the loaded JSON data using the specified or default file path. If no matching file object is found, it raises a ValueError, indicating that the specified file path does not exist in the project hierarchy.
+Если данные в JSON представляют собой список, они преобразуются в формат словаря для совместимости. Затем объекты файла сортируются по номеру строки начала кода. Для каждого объекта определяется уровень вложенности, и на основе этого формируется структура Markdown.
 
-Once the file object is successfully located, the function initializes an empty string to accumulate the markdown content. It sorts the objects associated with the file based on their starting line numbers in the code. The function then constructs a parent-child relationship mapping for the objects, which is crucial for determining the hierarchy levels in the markdown output.
+Функция обрабатывает объекты с типом `FunctionDef`, `AsyncFunctionDef` и `Function`, добавляя параметры в формате, соответствующем синтаксису Python.
 
-For each object, the function calculates its level in the hierarchy by traversing the parent dictionary. It constructs the markdown string by appending the object's type, name, and parameters, formatted according to its level. The markdown content includes the last piece of markdown content associated with the object, if available. Finally, the function appends a closing separator to the markdown string and returns the complete markdown representation.
+**Примечание**:
+При использовании функции необходимо убедиться, что путь к файлу указан корректно, иначе будет вызвано исключение `ValueError`. Также важно учесть, что функция предполагает наличие определённой структуры данных в JSON-файле.
 
-**Note**: It is important to ensure that the project_hierarchy.json file is correctly formatted and accessible, as the function relies on this data to perform its operations. Additionally, the function expects the objects within the JSON to have specific attributes such as "type", "name", "params", and "md_content" for proper markdown generation.
-
-**Output Example**: 
-A possible appearance of the code's return value could be:
-```
-# FunctionDef my_function(param1, param2):
-This function does something important.
-
-# AsyncFunctionDef my_async_function():
-This async function handles asynchronous operations.
-
-***
-```
+**Пример вывода**:
+Пример вывода зависит от структуры данных в JSON-файле и может представлять собой многоуровневый список с заголовками и содержимым в формате Markdown.
 ***

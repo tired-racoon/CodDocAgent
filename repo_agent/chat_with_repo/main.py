@@ -12,21 +12,18 @@ def main():
     # Load settings
     setting = SettingsManager.get_setting()
 
-    api_key = setting.chat_completion.openai_api_key
-    api_base = str(setting.chat_completion.openai_base_url)
+    api_key = setting.chat_completion.openai_api_key  # type: ignore
+    api_base = str(setting.chat_completion.openai_base_url)  # type: ignore
     db_path = (
-        setting.project.target_repo
-        / setting.project.hierarchy_name
+        setting.project.target_repo  # type: ignore
+        / setting.project.hierarchy_name  # type: ignore
         / "project_hierarchy.json"
     )
 
-    # Initialize RepoAssistant
     assistant = RepoAssistant(api_key, api_base, db_path)
 
-    # Extract data
     md_contents, meta_data = assistant.json_data.extract_data()
 
-    # Create vector store and measure runtime
     logger.info("Starting vector store creation...")
     start_time = time.time()
     assistant.vector_store_manager.create_vector_store(
@@ -35,7 +32,6 @@ def main():
     elapsed_time = time.time() - start_time
     logger.info(f"Vector store created successfully in {elapsed_time:.2f} seconds.")
 
-    # Launch Gradio interface
     GradioInterface(assistant.respond)
 
 

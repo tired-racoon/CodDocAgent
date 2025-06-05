@@ -1,7 +1,6 @@
-from llama_index.core import ChatPromptTemplate, PromptTemplate
-from llama_index.core.llms import ChatMessage, MessageRole
+from llama_index.core import ChatPromptTemplate, PromptTemplate  # type: ignore
+from llama_index.core.llms import ChatMessage, MessageRole  # type: ignore
 
-# Query Generation Prompt
 query_generation_prompt_str = (
     "You are a helpful assistant that generates multiple search queries based on a "
     "single input query. Generate {num_queries} search queries, one on each line, "
@@ -11,7 +10,6 @@ query_generation_prompt_str = (
 )
 query_generation_template = PromptTemplate(query_generation_prompt_str)
 
-# Relevance Ranking Prompt
 relevance_ranking_instruction = (
     "You are an expert relevance ranker. Given a list of documents and a query, your job is to determine how relevant each document is for answering the query. "
     "Your output is JSON, which is a list of documents. Each document has two fields, content and relevance_score. relevance_score is from 0.0 to 100.0. "
@@ -30,7 +28,6 @@ relevance_ranking_chat_template = ChatPromptTemplate(
     message_templates=relevance_ranking_message_template
 )
 
-# RAG (Retrieve and Generate) Prompt
 rag_prompt_str = (
     "You are a helpful assistant in repository Q&A. Users will ask questions about something contained in a repository. "
     "You will be shown the user's question, and the relevant information from the repository. Answer the user's question only with information given.\n\n"
@@ -39,7 +36,6 @@ rag_prompt_str = (
 )
 rag_template = PromptTemplate(rag_prompt_str)
 
-# RAG_AR (Advanced RAG) Prompt
 rag_ar_prompt_str = (
     "You are a helpful Repository-Level Software Q&A assistant. Your task is to answer users' questions based on the given information about a software repository, "
     "including related code and documents.\n\n"

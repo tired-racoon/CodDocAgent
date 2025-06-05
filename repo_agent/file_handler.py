@@ -1,8 +1,8 @@
-from tree_sitter import Parser, Language
-import tree_sitter_python as tspython
-import tree_sitter_java as tsjava
-import tree_sitter_go as tsgo
-import tree_sitter_kotlin as tskotlin
+from tree_sitter import Parser, Language  # type: ignore
+import tree_sitter_python as tspython  # type: ignore
+import tree_sitter_java as tsjava  # type: ignore
+import tree_sitter_go as tsgo  # type: ignore
+import tree_sitter_kotlin as tskotlin  # type: ignore
 
 import os
 import json
@@ -24,10 +24,22 @@ LANGUAGE_MAPPING = {
 }
 
 NODE_TYPES = {
-    "python": {"function": ["function_definition", "decorated_definition"], "class": ["class_definition"]},
-    "java": {"function": ["method_declaration", "constructor_declaration"], "class": ["class_declaration"]},
-    "go": {"function": ["function_declaration", "method_declaration"], "class": []},  # Go doesn't have classes per se
-    "kotlin": {"function": ["function_declaration"], "class": ["class_declaration", "object_declaration"]},
+    "python": {
+        "function": ["function_definition", "decorated_definition"],
+        "class": ["class_definition"],
+    },
+    "java": {
+        "function": ["method_declaration", "constructor_declaration"],
+        "class": ["class_declaration"],
+    },
+    "go": {
+        "function": ["function_declaration", "method_declaration"],
+        "class": [],
+    },  # Go doesn't have classes per se
+    "kotlin": {
+        "function": ["function_declaration"],
+        "class": ["class_declaration", "object_declaration"],
+    },
 }
 
 # File extension to language mapping
@@ -44,25 +56,25 @@ class FileHandler:
     def __init__(self, repo_path, file_path):
         self.file_path = file_path
         self.repo_path = repo_path
-        
+
         setting = SettingsManager.get_setting()
         self.project_hierarchy = (
-            setting.project.target_repo / setting.project.hierarchy_name
+            setting.project.target_repo / setting.project.hierarchy_name  # type: ignore
         )
-        
+
         # Determine language from file extension or detect most popular language
         if file_path is not None:
             self.language_name = self._detect_language(file_path)
         else:
             self.language_name = self._detect_most_popular_language()
-        
+
         if self.language_name and self.language_name in LANGUAGE_MAPPING:
             self.ts_language = LANGUAGE_MAPPING[self.language_name]
             self.parser = Parser(self.ts_language)
         else:
             self.ts_language = None
             self.parser = None
-        
+
         self.code = None
         self.root = None
 
@@ -78,25 +90,29 @@ class FileHandler:
                 directory=self.repo_path,
                 gitignore_path=os.path.join(self.repo_path, ".gitignore"),
             )
-            
+
             language_counter = Counter()
-            
+
             # Count files by language
             for file_path in gitignore_checker.check_files_and_folders():
                 language = self._detect_language(file_path)
                 if language:
                     language_counter[language] += 1
-            
+
             if language_counter:
                 # Return the most common language
                 most_popular = language_counter.most_common(1)[0][0]
-                logger.info(f"Detected most popular language in repository: {most_popular}")
+                logger.info(
+                    f"Detected most popular language in repository: {most_popular}"
+                )
                 return most_popular
             else:
                 # Default to Python if no supported languages found
-                logger.warning("No supported languages found in repository, defaulting to Python")
+                logger.warning(
+                    "No supported languages found in repository, defaulting to Python"
+                )
                 return "python"
-                
+
         except Exception as e:
             logger.error(f"Error detecting most popular language: {e}")
             # Default to Python in case of error
@@ -105,10 +121,12 @@ class FileHandler:
     def read_file(self, file_path=None):
         """Read file content"""
         target_file_path = file_path if file_path is not None else self.file_path
-        
+
         if target_file_path is None:
-            raise ValueError("No file path specified and no default file path available")
-            
+            raise ValueError(
+                "No file path specified and no default file path available"
+            )
+
         abs_file_path = os.path.join(self.repo_path, target_file_path)
         with open(abs_file_path, "r", encoding="utf-8") as file:
             content = file.read()
@@ -127,10 +145,12 @@ class FileHandler:
     def get_modified_file_versions(self, file_path=None):
         """Get current and previous versions of the file from git"""
         target_file_path = file_path if file_path is not None else self.file_path
-        
+
         if target_file_path is None:
-            raise ValueError("No file path specified and no default file path available")
-            
+            raise ValueError(
+                "No file path specified and no default file path available"
+            )
+
         repo = git.Repo(self.repo_path)
 
         # Read the file in the current working directory (current version)
@@ -173,7 +193,7 @@ class FileHandler:
             return ""
         start_byte = node.start_byte
         end_byte = node.end_byte
-        return self.code.encode('utf8')[start_byte:end_byte].decode('utf8')
+        return self.code.encode("utf8")[start_byte:end_byte].decode("utf8")
 
     def extract_name(self, node):
         """Extract name from a node, handling decorated functions properly"""
@@ -187,30 +207,33 @@ class FileHandler:
         else:
             # For other node types (classes, methods in other languages)
             return self._extract_name_generic(node)
-    
+
     def _extract_name_from_function_definition(self, node):
         """Extract name specifically from function_definition node"""
         for child in node.children:
             if child.type == "identifier":
                 return self.get_node_text(child)
         return "unknown"
-    
+
     def _extract_name_generic(self, node):
         """Generic name extraction for non-function nodes"""
         # Special handling for Go methods with receivers
-        if self.language_name == "go" and node.type in ["method_declaration", "function_declaration"]:
+        if self.language_name == "go" and node.type in [
+            "method_declaration",
+            "function_declaration",
+        ]:
             return self._extract_go_function_name(node)
-        
+
         for child in node.children:
             if child.type == "identifier" or child.type == "name":
                 return self.get_node_text(child)
         return "unknown"
-    
+
     def _extract_go_function_name(self, node):
         """Extract function/method name specifically for Go"""
         # For Go methods: func (receiver) name(params)
         # For Go functions: func name(params)
-        
+
         # Look for field_identifier (for methods) or identifier (for functions)
         for child in node.children:
             if child.type == "field_identifier":
@@ -225,13 +248,13 @@ class FileHandler:
                         break
                     if prev_child.type == "parameter_list":
                         receiver_found = True
-                
+
                 # If no receiver found, or this identifier comes after receiver,
                 # it's likely the function name
                 if not receiver_found:
                     # For regular functions: func name(params)
                     return self.get_node_text(child)
-        
+
         return "unknown"
 
     def extract_parameters(self, node):
@@ -253,7 +276,7 @@ class FileHandler:
             for child in node.children:
                 if child.type == "function_definition":
                     return self._extract_python_parameters(child)
-        
+
         # Handle regular function definitions
         for child in node.children:
             if child.type == "parameters":
@@ -278,7 +301,9 @@ class FileHandler:
                 for param_child in child.children:
                     if param_child.type == "formal_parameter":
                         # Get parameter name (last identifier in formal_parameter)
-                        identifiers = [c for c in param_child.children if c.type == "identifier"]
+                        identifiers = [
+                            c for c in param_child.children if c.type == "identifier"
+                        ]
                         if identifiers:
                             params.append(self.get_node_text(identifiers[-1]))
                 return params
@@ -317,40 +342,48 @@ class FileHandler:
         """Extract functions and classes from parsed code"""
         if not self.root or not self.language_name:
             return []
-            
+
         result = []
 
         def walk(node, parent_name=None):
             for child in node.children:
                 node_type = child.type
-                type_map = NODE_TYPES[self.language_name]
+                type_map = NODE_TYPES[self.language_name]  # type: ignore
 
                 if node_type in type_map["function"]:
                     name = self.extract_name(child)
                     params = self.extract_parameters(child)
                     code_content = self.get_node_text(child)
-                    result.append((
-                        "FunctionDef" if self.language_name == "python" else "Function",
-                        name,
-                        child.start_point[0] + 1,  # 1-based
-                        child.end_point[0] + 1,
-                        params,
-                        parent_name,
-                        code_content
-                    ))
+                    result.append(
+                        (
+                            (
+                                "FunctionDef"
+                                if self.language_name == "python"
+                                else "Function"
+                            ),
+                            name,
+                            child.start_point[0] + 1,  # 1-based
+                            child.end_point[0] + 1,
+                            params,
+                            parent_name,
+                            code_content,
+                        )
+                    )
 
                 elif node_type in type_map["class"]:
                     name = self.extract_name(child)
                     code_content = self.get_node_text(child)
-                    result.append((
-                        "ClassDef" if self.language_name == "python" else "Class",
-                        name,
-                        child.start_point[0] + 1,
-                        child.end_point[0] + 1,
-                        [],
-                        None,
-                        code_content
-                    ))
+                    result.append(
+                        (
+                            "ClassDef" if self.language_name == "python" else "Class",
+                            name,
+                            child.start_point[0] + 1,
+                            child.end_point[0] + 1,
+                            [],
+                            None,
+                            code_content,
+                        )
+                    )
                     walk(child, name)
                 else:
                     walk(child, parent_name)
@@ -358,7 +391,9 @@ class FileHandler:
         walk(self.root)
         return result
 
-    def get_obj_code_info(self, code_type, code_name, start_line, end_line, params, file_path=None):
+    def get_obj_code_info(
+        self, code_type, code_name, start_line, end_line, params, file_path=None
+    ):
         """Get detailed information about a code object"""
         code_info = {}
         code_info["type"] = code_type
@@ -369,10 +404,12 @@ class FileHandler:
         code_info["params"] = params
 
         target_file_path = file_path if file_path is not None else self.file_path
-        
+
         if target_file_path is None:
-            raise ValueError("No file path specified and no default file path available")
-        
+            raise ValueError(
+                "No file path specified and no default file path available"
+            )
+
         with open(
             os.path.join(self.repo_path, target_file_path),
             "r",
@@ -381,10 +418,10 @@ class FileHandler:
             lines = code_file.readlines()
             code_content = "".join(lines[start_line - 1 : end_line])
             name_column = lines[start_line - 1].find(code_name) if lines else 0
-            
+
             # Check for return statement
             have_return = "return" in code_content
-            
+
             code_info["have_return"] = have_return
             code_info["code_content"] = code_content
             code_info["name_column"] = name_column
@@ -395,39 +432,47 @@ class FileHandler:
         """Generate structure for a single file"""
         if file_path is None:
             raise ValueError("File path cannot be None for generate_file_structure")
-            
+
         # Detect language for this specific file
         language = self._detect_language(file_path)
-        
+
         if not language or language not in LANGUAGE_MAPPING:
             # Fallback to basic parsing for unsupported files
             return self._fallback_file_structure(file_path)
-        
+
         # Temporarily switch language if different from current
         original_language = self.language_name
         original_parser = self.parser
-        
+
         if language != self.language_name:
             self.language_name = language
             self.ts_language = LANGUAGE_MAPPING[language]
             self.parser = Parser(self.ts_language)
-        
+
         try:
             self.parse_file(file_path)
             structures = self.get_functions_and_classes()
             file_objects = []
-            
+
             for struct in structures:
-                structure_type, name, start_line, end_line, params, parent, code_content = struct
+                (
+                    structure_type,
+                    name,
+                    start_line,
+                    end_line,
+                    params,
+                    parent,
+                    code_content,
+                ) = struct
                 code_info = self.get_obj_code_info(
                     structure_type, name, start_line, end_line, params, file_path
                 )
                 # Add parent information
                 code_info["parent"] = parent
                 file_objects.append(code_info)
-            
+
             return file_objects
-            
+
         finally:
             # Restore original language settings
             self.language_name = original_language
@@ -480,7 +525,9 @@ class FileHandler:
             file_path = self.file_path
 
         if file_path is None:
-            raise ValueError("No file path specified and no default file path available")
+            raise ValueError(
+                "No file path specified and no default file path available"
+            )
 
         # Handle both dict and list formats
         if isinstance(json_data.get(file_path), list):
@@ -499,17 +546,17 @@ class FileHandler:
 
         markdown = ""
         parent_dict = {}
-        
+
         # Handle both dict values and list of objects
-        if hasattr(file_dict, 'values'):
+        if hasattr(file_dict, "values"):
             objects = sorted(file_dict.values(), key=lambda obj: obj["code_start_line"])
         else:
             objects = sorted(file_dict, key=lambda obj: obj["code_start_line"])
-            
+
         for obj in objects:
             if obj.get("parent") is not None:
                 parent_dict[obj["name"]] = obj["parent"]
-                
+
         current_parent = None
         for obj in objects:
             level = 1
@@ -526,10 +573,8 @@ class FileHandler:
                 if obj.get("params"):
                     params_str = f"({', '.join(obj['params'])})"
             markdown += f"{'#' * level} {obj['type']} {obj['name']}{params_str}:\n"
-            md_content = obj.get('md_content', [])
-            markdown += (
-                f"{md_content[-1] if len(md_content) > 0 else ''}\n"
-            )
+            md_content = obj.get("md_content", [])
+            markdown += f"{md_content[-1] if len(md_content) > 0 else ''}\n"
         markdown += "***\n"
 
         return markdown

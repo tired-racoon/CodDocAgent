@@ -25,27 +25,29 @@ import yaml
 with open("config.yaml", "r", encoding="utf8") as f:
     config = yaml.load(f, Loader=yaml.FullLoader)
 
+
 def replace_extension_to_md(file_path: str) -> str:
     path_obj = Path(file_path)
-    return str(path_obj.with_suffix('.md'))
+    return str(path_obj.with_suffix(".md"))
+
 
 class Runner:
     def __init__(self):
         self.setting = SettingsManager.get_setting()
         self.absolute_project_hierarchy_path = (
-            self.setting.project.target_repo / self.setting.project.hierarchy_name
+            self.setting.project.target_repo / self.setting.project.hierarchy_name  # type: ignore
         )
 
         self.project_manager = ProjectManager(
-            repo_path=self.setting.project.target_repo,
-            project_hierarchy=self.setting.project.hierarchy_name,
+            repo_path=self.setting.project.target_repo,  # type: ignore
+            project_hierarchy=self.setting.project.hierarchy_name,  # type: ignore
         )
         self.change_detector = ChangeDetector(
-            repo_path=self.setting.project.target_repo
+            repo_path=self.setting.project.target_repo  # type: ignore
         )
         self.chat_engine = ChatEngine(
             project_manager=self.project_manager,
-            model_name=self.setting.chat_completion.model,
+            model_name=self.setting.chat_completion.model,  # type: ignore
         )
 
         if not self.absolute_project_hierarchy_path.exists():
@@ -73,7 +75,7 @@ class Runner:
 
     def generate_doc_for_a_single_item(self, doc_item: DocItem):
         try:
-            if not need_to_generate(doc_item, self.setting.project.ignore_list):
+            if not need_to_generate(doc_item, self.setting.project.ignore_list):  # type: ignore
                 print(
                     f"Content ignored/Document generated, skipping: {doc_item.get_full_name()}"
                 )
@@ -98,7 +100,7 @@ class Runner:
     def first_generate(self):
         logger.info("Starting to generate documentation")
         check_task_available_func = partial(
-            need_to_generate, ignore_list=self.setting.project.ignore_list
+            need_to_generate, ignore_list=self.setting.project.ignore_list  # type: ignore
         )
         task_manager = self.meta_info.get_topology(check_task_available_func)
         before_task_len = len(task_manager.task_dict)
@@ -108,7 +110,7 @@ class Runner:
             logger.info("Init a new task-list")
         else:
             logger.info("Load from an existing task-list")
-        self.meta_info.print_task_list(task_manager.task_dict)
+        self.meta_info.print_task_list(task_manager.task_dict)  # type: ignore
 
         try:
             worker(task_manager, self.generate_doc_for_a_single_item)
@@ -134,8 +136,8 @@ class Runner:
     def markdown_refresh(self):
         with self.runner_lock:
             markdown_folder = (
-                Path(self.setting.project.target_repo)
-                / self.setting.project.markdown_docs_name
+                Path(self.setting.project.target_repo)  # type: ignore
+                / self.setting.project.markdown_docs_name  # type: ignore
             )
 
             if markdown_folder.exists():
@@ -173,11 +175,12 @@ class Runner:
                 )
                 continue
 
-            file_path = Path(
-                self.setting.project.markdown_docs_name
-            ) / file_item.get_file_name()
-            file_path = replace_extension_to_md(file_path)
-            abs_file_path = self.setting.project.target_repo / file_path
+            file_path = (
+                Path(self.setting.project.markdown_docs_name)  # type: ignore
+                / file_item.get_file_name()
+            )
+            file_path = replace_extension_to_md(file_path)  # type: ignore
+            abs_file_path = self.setting.project.target_repo / file_path  # type: ignore
             logger.debug(f"Writing markdown to: {abs_file_path}")
 
             abs_file_path.parent.mkdir(parents=True, exist_ok=True)
@@ -197,7 +200,7 @@ class Runner:
                         time.sleep(1)
 
         logger.info(
-            f"Markdown documents have been refreshed at {self.setting.project.markdown_docs_name}"
+            f"Markdown documents have been refreshed at {self.setting.project.markdown_docs_name}"  # type: ignore
         )
 
     def to_markdown(self, item, now_level: int) -> str:
@@ -254,7 +257,7 @@ class Runner:
             self.meta_info.in_generation_process = True
 
         check_task_available_func = partial(
-            need_to_generate, ignore_list=self.setting.project.ignore_list
+            need_to_generate, ignore_list=self.setting.project.ignore_list  # type: ignore
         )
 
         task_manager = self.meta_info.get_task_manager(
@@ -266,7 +269,7 @@ class Runner:
             print(
                 f"{Fore.LIGHTMAGENTA_EX}[Dir/File/Obj Delete Dected]: {Style.RESET_ALL} {item_type} {item_name}"
             )
-        self.meta_info.print_task_list(task_manager.task_dict)
+        self.meta_info.print_task_list(task_manager.task_dict)  # type: ignore
         if task_manager.all_success:
             logger.info(
                 "No tasks in the queue, all documents are completed and up to date."
@@ -295,8 +298,6 @@ class Runner:
             logger.info(
                 f"Added {[file for file in git_add_result]} to the staging area."
             )
-
-        # self.git_commit(f"Update documentation for {file_handler.file_path}") # 提交变更
 
     def add_new_item(self, file_handler, json_data):
         """
@@ -339,7 +340,7 @@ class Runner:
         file_handler.write_file(
             os.path.join(
                 self.project_manager.repo_path,
-                self.setting.project.markdown_docs_name,
+                self.setting.project.markdown_docs_name,  # type: ignore
                 replace_extension_to_md(file_handler.file_path),
             ),
             markdown,
@@ -383,14 +384,14 @@ class Runner:
             ) as f:
                 json.dump(json_data, f, indent=4, ensure_ascii=False)
 
-            logger.info(f"已更新{file_handler.file_path}文件的json结构信息。")
+            logger.info(f"{file_handler.file_path} dumped to json")
 
             markdown = file_handler.convert_to_markdown_file(
                 file_path=file_handler.file_path
             )
             file_handler.write_file(
                 os.path.join(
-                    self.setting.project.markdown_docs_name,
+                    self.setting.project.markdown_docs_name,  # type: ignore
                     replace_extension_to_md(file_handler.file_path),
                 ),
                 markdown,
@@ -424,7 +425,7 @@ class Runner:
         for obj_name in del_obj:
             if obj_name in file_dict:
                 del file_dict[obj_name]
-                logger.info(f"已删除 {obj_name} 对象。")
+                logger.info(f"Deleted {obj_name}")
 
         referencer_list = []
 
@@ -453,7 +454,7 @@ class Runner:
                 if obj_name == current_object["name"]:
                     referencer_obj = {
                         "obj_name": obj_name,
-                        "obj_referencer_list": self.project_manager.find_all_referencer(
+                        "obj_referencer_list": self.project_manager.find_all_referencer(  # type: ignore
                             variable_name=current_object["name"],
                             file_path=file_handler.file_path,
                             line_number=current_object["code_start_line"],
