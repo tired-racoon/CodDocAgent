@@ -1,0 +1,27 @@
+from __future__ import annotations
+from g4f.client import Client  # type: ignore
+import os
+from ..utils import log  # type: ignore
+
+logger = log.logger()
+
+
+def ask_gpt(prom: str, temperature=0.6) -> str:
+    """
+    :param prom:
+    :return: response.choices[0].message.content (возвращаем сгенерированные данные)
+    Функция генерации кейсов через g4f (https://github.com/xtekky/gpt4free) по переданному prompt запросу (prom)
+    """
+    try:
+        client = Client()
+        response = client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=[{"role": "user", "content": prom}],
+            temperature=temperature,
+        )
+    except Exception as e:
+        logger.error(e)
+        response.choices[0].message.content = (  # type: ignore
+            "К сожалению у gpt возникли проблемы, попробуй позже"
+        )
+    return response.choices[0].message.content  # type: ignore
