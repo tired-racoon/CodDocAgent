@@ -21,7 +21,7 @@ class ReferenceObject:
 
 
 class ReferenceFinder:
-    def __init__(self, repo_path: str, file_path: str = None):
+    def __init__(self, repo_path: str, file_path: str = ''):
         self.repo_path = repo_path
         self.file_path = file_path  # Current file path (like jedi.Script)
         self.parsers = {}  # Cache parsers for different languages
@@ -397,7 +397,7 @@ class ReferenceFinder:
         walk(root)
         return dict(imports)
     
-    def _get_function_full_path(self, file_path: str, function_name: str, class_name: str = None) -> str:
+    def _get_function_full_path(self, file_path: str, function_name: str, class_name: str = '') -> str:
         """Get full path of a function for matching with imports"""
         rel_path = os.path.relpath(file_path, self.repo_path)
         
