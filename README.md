@@ -1,7 +1,7 @@
 <h1 align="center">
   <img src="https://github.com/OpenBMB/RepoAgent/assets/138990495/06bc2449-c82d-4b9e-8c83-27640e541451" width="50" alt="RepoAgent logo"/> <em>CodDocAgent - AI-агент для генерации кодовой документации. </em>
 </h1>
-
+Создано на основе [RepoAgent](https://github.com/OpenBMB/RepoAgent)
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/OpenBMB/RepoAgent/main/assets/images/RepoAgent.png" alt="RepoAgent"/>
