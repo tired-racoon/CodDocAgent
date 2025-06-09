@@ -1,3 +1,4 @@
+from functools import lru_cache
 from tree_sitter import Parser, Language  # type: ignore
 import tree_sitter_python as tspython  # type: ignore
 import tree_sitter_java as tsjava  # type: ignore
@@ -58,7 +59,7 @@ class TreeSitterParser:
 
         setting = SettingsManager.get_setting()
         self.project_hierarchy = (
-            setting.project.target_repo / setting.project.hierarchy_name  # type: ignore
+                setting.project.target_repo / setting.project.hierarchy_name  # type: ignore
         )
 
         # Determine language from file extension
@@ -74,13 +75,15 @@ class TreeSitterParser:
         self.code = None
         self.root = None
 
+    @lru_cache(maxsize=100)
     def _detect_language(self, file_path):
-        """Detect programming language from file extension"""
+        """Detect programming language from file extension with caching"""
         _, ext = os.path.splitext(file_path)
         return EXTENSION_TO_LANGUAGE.get(ext.lower())
 
+    @lru_cache(maxsize=1)
     def read_file(self):
-        """Read file content"""
+        """Read file content with caching (file won't change during processing)"""
         abs_file_path = os.path.join(self.repo_path, self.file_path)
         with open(abs_file_path, "r", encoding="utf-8") as file:
             content = file.read()
@@ -119,8 +122,9 @@ class TreeSitterParser:
 
         return current_version, previous_version
 
+    @lru_cache(maxsize=32)
     def parse_code(self, code: str):
-        """Parse code using tree-sitter"""
+        """Parse code using tree-sitter with caching"""
         if not self.parser:
             return None
         self.code = code
@@ -128,8 +132,9 @@ class TreeSitterParser:
         self.root = tree.root_node
         return self.root
 
+    @lru_cache(maxsize=100)
     def parse_file(self, filename: str):
-        """Parse file using tree-sitter"""
+        """Parse file using tree-sitter with caching"""
         with open(os.path.join(self.repo_path, filename), "r", encoding="utf-8") as f:
             code = f.read()
         return self.parse_code(code)
@@ -224,8 +229,9 @@ class TreeSitterParser:
                 return params
         return []
 
+    @lru_cache(maxsize=1)
     def get_functions_and_classes(self):
-        """Extract functions and classes from parsed code"""
+        """Extract functions and classes from parsed code with caching"""
         if not self.root or not self.language_name:
             return []
 
@@ -278,7 +284,7 @@ class TreeSitterParser:
         return result
 
     def get_obj_code_info(
-        self, code_type, code_name, start_line, end_line, params, file_path=None
+            self, code_type, code_name, start_line, end_line, params, file_path=None
     ):
         code_info = {}
         code_info["type"] = code_type
@@ -291,12 +297,12 @@ class TreeSitterParser:
         target_file_path = file_path if file_path is not None else self.file_path
 
         with open(
-            os.path.join(self.repo_path, target_file_path),
-            "r",
-            encoding="utf-8",
+                os.path.join(self.repo_path, target_file_path),
+                "r",
+                encoding="utf-8",
         ) as code_file:
             lines = code_file.readlines()
-            code_content = "".join(lines[start_line - 1 : end_line])
+            code_content = "".join(lines[start_line - 1: end_line])
             name_column = lines[start_line - 1].find(code_name) if lines else 0
 
             have_return = "return" in code_content
@@ -307,8 +313,9 @@ class TreeSitterParser:
 
         return code_info
 
+    @lru_cache(maxsize=100)
     def generate_file_structure(self, file_path):
-        """Generate structure for a single file"""
+        """Generate structure for a single file with caching"""
         # Detect language for this specific file
         language = self._detect_language(file_path)
 
@@ -360,12 +367,15 @@ class TreeSitterParser:
         return []
 
     def generate_overall_structure(self, file_path_reflections, jump_files) -> dict:
-        """Generate structure for entire repository"""
+        """Generate structure for entire repository with custom caching"""
         repo_structure = {}
         gitignore_checker = GitignoreChecker(
             directory=self.repo_path,
             gitignore_path=os.path.join(self.repo_path, ".gitignore"),
         )
+
+        # Custom cache for file processing results
+        file_cache = {}
 
         bar = tqdm(gitignore_checker.check_files_and_folders())
         for not_ignored_files in bar:
@@ -380,10 +390,17 @@ class TreeSitterParser:
                     f"{Fore.LIGHTYELLOW_EX}[TreeSitter-Parser] Skip Latest Version, Using Git-Status Version]: {Style.RESET_ALL}{normal_file_names}"
                 )
                 continue
+
+            # Check cache before processing
+            if normal_file_names in file_cache:
+                repo_structure[normal_file_names] = file_cache[normal_file_names]
+                continue
+
             try:
-                repo_structure[normal_file_names] = self.generate_file_structure(
-                    not_ignored_files
-                )
+                result = self.generate_file_structure(not_ignored_files)
+                repo_structure[normal_file_names] = result
+                # Cache the result
+                file_cache[normal_file_names] = result
             except Exception as e:
                 logger.error(
                     f"Alert: An error occurred while generating file structure for {not_ignored_files}: {e}"
