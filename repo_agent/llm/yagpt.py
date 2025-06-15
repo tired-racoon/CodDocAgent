@@ -48,23 +48,23 @@ def yandex_gpt(prom: str, temperature=0.6, old_prompt="", old_response=""):
         model_uri = "gpt://" + config["auth"]["folder_id"] + "/llama/rc"
     # ниже идут пакетные модели
     elif model == "qwen2.5i-7b":
-        model_uri = "gpt://" + config["auth"]["folder_id"] + "qwen2.5-7b-instruct"
+        model_uri = "gpt://" + config["auth"]["folder_id"] + "/qwen2.5-7b-instruct"
     elif model == "qwen2.5i-72b":
-        model_uri = "gpt://" + config["auth"]["folder_id"] + "qwen2.5-72b-instruct"
+        model_uri = "gpt://" + config["auth"]["folder_id"] + "/qwen2.5-72b-instruct"
     elif model == "deepseek-r1-qwen32b":
         model_uri = (
-            "gpt://" + config["auth"]["folder_id"] + "deepseek-r1-distill-qwen-32b"
+            "gpt://" + config["auth"]["folder_id"] + "/deepseek-r1-distill-qwen-32b"
         )
     elif model == "gemma12b":
-        model_uri = "gpt://" + config["auth"]["folder_id"] + "gemma-3-12b-it"
+        model_uri = "gpt://" + config["auth"]["folder_id"] + "/gemma-3-12b-it"
     elif model == "gemma27b":
-        model_uri = "gpt://" + config["auth"]["folder_id"] + "gemma-3-27b-it"
+        model_uri = "gpt://" + config["auth"]["folder_id"] + "/gemma-3-27b-it"
     elif model == "qwen3-8b":
-        model_uri = "gpt://" + config["auth"]["folder_id"] + "qwen3-8b"
+        model_uri = "gpt://" + config["auth"]["folder_id"] + "/qwen3-8b"
     elif model == "qwen3-14b":
-        model_uri = "gpt://" + config["auth"]["folder_id"] + "qwen3-14b"
+        model_uri = "gpt://" + config["auth"]["folder_id"] + "/qwen3-14b"
     elif model == "qwen3-32b":
-        model_uri = "gpt://" + config["auth"]["folder_id"] + "qwen3-32b"
+        model_uri = "gpt://" + config["auth"]["folder_id"] + "/qwen3-32b"
     else:
         raise ValueError("Model name in config is incorrect")
     if old_prompt == "" and old_response == "":
@@ -88,4 +88,5 @@ def yandex_gpt(prom: str, temperature=0.6, old_prompt="", old_response=""):
         },
     )
     data = response.json()
+    print(data)
     return data["result"]["alternatives"][0]["message"]["text"]
