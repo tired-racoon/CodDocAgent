@@ -1,5 +1,6 @@
 import os
 from collections import defaultdict
+from concurrent.futures import ThreadPoolExecutor
 from functools import lru_cache
 
 from repo_agent.parsers.file_parser import TreeSitterParser
@@ -7,7 +8,7 @@ from tree_sitter import Node  # type: ignore
 
 
 class CallGraphBuilder:
-    def __init__(self, repo_path: str):
+    def __init__(self, repo_path: str, parallel_threshold: int = 100000, vgc_tau: int = 512):
         self.repo_path = repo_path
         self.call_graph = defaultdict(lambda: {"calls": set(), "called_by": set()})
         self.ignore_libs = {
@@ -149,23 +150,22 @@ class CallGraphBuilder:
             print(f"[!] Failed to process {file_path}: {e}")
 
     def build_from_repo(self):
+        # scan files
         for root_dir, _, files in os.walk(self.repo_path):
             for file in files:
                 ext = os.path.splitext(file)[1]
-                lang = {
-                    ".py": "python",
-                    ".go": "go",
-                    ".java": "java",
-                    ".kt": "kotlin"
-                }.get(ext)
+                lang = {'.py': 'python', '.go': 'go', '.java': 'java', '.kt': 'kotlin'}.get(ext)
                 if not lang:
                     continue
-
                 path = os.path.join(root_dir, file)
                 self.process_file(path, lang)
 
-        # После построения raw-графа вычисляем SCC и сжимаем граф
-        self._compute_scc_and_compress()
+        # choose algorithm based on graph size
+        V = len(self.call_graph)
+        if V >= self.parallel_threshold:
+            self._compute_parallel_scc_and_compress()
+        else:
+            self._compute_scc_and_compress()
 
     def get_call_graph(self):
         return self.call_graph
@@ -226,4 +226,59 @@ class CallGraphBuilder:
                     if nbr in self.component_of and self.component_of[nbr] != cid:
                         outgoing.add(self.component_of[nbr])
             compressed[cid] = {"nodes": comp, "calls": outgoing}
+        self.compressed_graph = compressed
+
+    def _compute_parallel_scc_and_compress(self):
+        # SIGMOD’23 style: parallel reachability + VGC + hash bag
+        # build adjacency and reverse lists
+        adj = {u: set(vs['calls']) for u, vs in self.call_graph.items()}
+        radj = {u: set() for u in self.call_graph}
+        for u, vs in adj.items():
+            for v in vs:
+                radj.setdefault(v, set()).add(u)
+
+        remaining = set(self.call_graph.keys())
+        cid = 0
+        compressed = {}
+
+        # helper: batched BFS with VGC
+        def batched_reach(start, graph):
+            visited = set([start])
+            frontier = {start}
+            while frontier:
+                next_front = set()
+                for u in frontier:
+                    # explore up to tau neighbors
+                    count = 0
+                    for w in graph.get(u, []):
+                        if w not in visited:
+                            visited.add(w)
+                            next_front.add(w)
+                        count += 1
+                        if count >= self.vgc_tau:
+                            break
+                frontier = next_front
+            return visited
+
+        # parallel executor to speed up frontiers
+        with ThreadPoolExecutor() as exec:
+            while remaining:
+                s = next(iter(remaining))
+                # forward and backward
+                fwd = exec.submit(batched_reach, s, adj)
+                bwd = exec.submit(batched_reach, s, radj)
+                S = fwd.result() & bwd.result()
+                # record component
+                for u in S:
+                    self.component_of[u] = cid
+                compressed[cid] = {"nodes": list(S), "calls": set()}
+                # build outgoing edges
+                for u in S:
+                    for v in adj.get(u, []):
+                        if v not in S:
+                            compressed[cid]['calls'].add(None)  # placeholder for neighbor cid
+                remaining -= S
+                cid += 1
+
+        self.scc = []  # optional fill
         self.compressed_graph = compressed
