@@ -1,4 +1,5 @@
 import os
+from functools import lru_cache
 from collections import defaultdict
 from tree_sitter import Node  # type: ignore
 
@@ -55,13 +56,11 @@ class CallGraphBuilder:
             }
 
             if node.type in call_node_types.get(language, set()):
-                if language == "java":
-                    call_name = self._extract_function_name(node, code)
-                elif language == "kotlin":
+                if language in {"java", "kotlin"}:
                     call_name = self._extract_function_name(node, code)
                 else:
-                    function_name_node = node.child_by_field_name("function")
-                    call_name = self._extract_function_name(function_name_node, code)
+                    func_node = node.child_by_field_name("function")
+                    call_name = self._extract_function_name(func_node, code)
 
                 if parent_func and call_name:
                     calls.append((parent_func, call_name))
@@ -70,13 +69,14 @@ class CallGraphBuilder:
                 walk(child, parent_func)
 
         walk(root)
-        # Возвращаем список с функциями и вызовами + путь
+
         rel_path = os.path.relpath(file_path, self.repo_path)
         return [(name, start, end, rel_path) for name, start, end in functions], calls
 
-    def _extract_function_name(self, node: Node, code: bytes) -> str:
+    def _extract_function_name(self, node: Node, code: bytes) -> str | None:
         if node is None:
-            return None  # type: ignore
+            return None
+
         if node.type in ("selector_expression", "member_expression"):
             left = self._extract_function_name(
                 node.child_by_field_name("object")
@@ -87,65 +87,71 @@ class CallGraphBuilder:
                 node.child_by_field_name("name") or node.child_by_field_name("field"),
                 code,
             )
-            return f"{left}.{right}" if left and right else None  # type: ignore
+            return f"{left}.{right}" if left and right else None
+
         elif node.type == "method_invocation":
             name_node = node.child_by_field_name("name")
-            return self._get_node_text(name_node, code) if name_node else None  # type: ignore
+            return self._get_node_text(name_node, code) if name_node else None
+
         elif node.type == "call_expression":
-            # Специальная обработка Kotlin вызова функции
             for child in node.children:
                 if child.type == "identifier":
-                    return self._get_node_text(child, code)  # type: ignore
-            return None  # type: ignore
-        elif node.type == "identifier":
-            return self._get_node_text(node, code)  # type: ignore
-        else:
-            return self._get_node_text(node, code)  # type: ignore
+                    return self._get_node_text(child, code)
+            return None
 
-    def _get_node_text(self, node, code: bytes):
+        elif node.type == "identifier":
+            return self._get_node_text(node, code)
+
+        else:
+            return self._get_node_text(node, code)
+
+    def _get_node_text(self, node: Node, code: bytes) -> str | None:
         if not node:
             return None
-        # Берём срез из байтов и декодируем в строку
-        return code[node.start_byte : node.end_byte].decode("utf8")
+        return code[node.start_byte:node.end_byte].decode("utf-8")
 
-    def process_file(self, file_path: str, language: str):
+    @lru_cache(maxsize=256)
+    def _load_ast_and_code(self, file_path: str, language: str) -> tuple[Node, bytes]:
         parser = TreeSitterParser(language)
         root = parser.parse_file(file_path)
-        with open(file_path, "r", encoding="utf-8") as f:
+        with open(file_path, "rb") as f:
             code = f.read()
-        functions, calls = self.extract_functions_and_calls(
-            root, language, code.encode("utf-8"), file_path
-        )
-        for func_name, start_line, end_line, rel_path in functions:
-            self.call_graph[func_name]["location"] = {  # type: ignore
-                "file": rel_path,
-                "start_line": start_line,
-                "end_line": end_line,
-            }
-        for caller, callee in calls:
-            self.call_graph[caller]["calls"].add(callee)
-            self.call_graph[callee]["called_by"].add(caller)
+        return root, code
+
+    def process_file(self, file_path: str, language: str):
+        try:
+            root, code = self._load_ast_and_code(file_path, language)
+            functions, calls = self.extract_functions_and_calls(
+                root, language, code, file_path
+            )
+            for func_name, start_line, end_line, rel_path in functions:
+                self.call_graph[func_name]["location"] = {
+                    "file": rel_path,
+                    "start_line": start_line,
+                    "end_line": end_line,
+                }
+            for caller, callee in calls:
+                self.call_graph[caller]["calls"].add(callee)
+                self.call_graph[callee]["called_by"].add(caller)
+
+        except Exception as e:
+            print(f"[!] Failed to process {file_path}: {e}")
 
     def build_from_repo(self):
-        for root, _, files in os.walk(self.repo_path):
+        for root_dir, _, files in os.walk(self.repo_path):
             for file in files:
                 ext = os.path.splitext(file)[1]
-                if ext == ".py":
-                    lang = "python"
-                elif ext == ".go":
-                    lang = "go"
-                elif ext == ".java":
-                    lang = "java"
-                elif ext == ".kt":
-                    lang = "kotlin"
-                else:
+                lang = {
+                    ".py": "python",
+                    ".go": "go",
+                    ".java": "java",
+                    ".kt": "kotlin"
+                }.get(ext)
+                if not lang:
                     continue
 
-                path = os.path.join(root, file)
-                try:
-                    self.process_file(path, lang)
-                except Exception as e:
-                    print(f"Failed to process {path}: {e}")
+                path = os.path.join(root_dir, file)
+                self.process_file(path, lang)
 
     def get_call_graph(self):
         return self.call_graph
